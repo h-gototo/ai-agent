@@ -1,0 +1,3026 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PDFツール v1.7</title>
+<script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://unpkg.com/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&family=Noto+Serif+JP:wght@400;700&family=Zen+Maru+Gothic&family=Zen+Kaku+Gothic+New&display=swap');
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --primary: #6366f1;
+  --primary-dark: #4f46e5;
+  --primary-light: #a5b4fc;
+  --bg: #f5f3ff;
+  --card: #ffffff;
+  --text: #1e1b4b;
+  --text-sub: #6b7280;
+  --border: #e5e7eb;
+  --success: #10b981;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+  --sidebar-w: 250px;
+  --accent-pink: #ec4899;
+  --accent-cyan: #06b6d4;
+  --accent-amber: #f59e0b;
+}
+body {
+  font-family: 'Inter', 'Noto Sans JP', 'Yu Gothic UI', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+/* Sidebar */
+.sidebar {
+  width: var(--sidebar-w);
+  background: linear-gradient(160deg, #312e81 0%, #4338ca 50%, #6366f1 100%);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  box-shadow: 4px 0 24px rgba(99,102,241,0.15);
+}
+.sidebar-header {
+  padding: 28px 24px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.12);
+}
+.sidebar-header h1 {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #fff;
+}
+.sidebar-header p {
+  font-size: 11px;
+  opacity: 0.6;
+  margin-top: 4px;
+  letter-spacing: 1px;
+}
+.sidebar-nav {
+  flex: 1;
+  padding: 12px 0;
+  overflow-y: auto;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 24px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 13.5px;
+  font-weight: 500;
+  border-left: 3px solid transparent;
+  position: relative;
+}
+.nav-item:hover {
+  background: rgba(255,255,255,0.1);
+}
+.nav-item.active {
+  background: rgba(255,255,255,0.18);
+  border-left-color: #a5b4fc;
+  font-weight: 600;
+}
+.nav-item.active::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 60%;
+  background: #a5b4fc;
+  border-radius: 3px 0 0 3px;
+}
+.nav-item .icon {
+  width: 24px;
+  text-align: center;
+  font-size: 16px;
+}
+.sidebar-footer {
+  padding: 14px 20px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  font-size: 10px;
+  opacity: 0.6;
+  line-height: 1.6;
+}
+/* Main */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.main-header {
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  padding: 18px 32px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.main-header h2 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+.main-header .desc {
+  font-size: 13px;
+  color: var(--text-sub);
+}
+.main-content {
+  flex: 1;
+  padding: 24px 32px;
+  overflow-y: auto;
+  background: linear-gradient(180deg, #f5f3ff 0%, #ede9fe 50%, #f5f3ff 100%);
+  background-attachment: fixed;
+}
+/* Scrollbar */
+.main-content::-webkit-scrollbar { width: 6px; }
+.main-content::-webkit-scrollbar-track { background: transparent; }
+.main-content::-webkit-scrollbar-thumb { background: var(--primary-light); border-radius: 3px; }
+.main-content::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+/* Cards */
+.card {
+  background: var(--card);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 3px rgba(99,102,241,0.06), 0 4px 12px rgba(99,102,241,0.04);
+  transition: box-shadow 0.2s;
+}
+.card:hover {
+  box-shadow: 0 2px 8px rgba(99,102,241,0.1), 0 8px 24px rgba(99,102,241,0.06);
+}
+.card h3 {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+/* Drop Zone */
+.drop-zone {
+  border: 2px dashed var(--primary-light);
+  border-radius: 16px;
+  padding: 48px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+  position: relative;
+  overflow: hidden;
+}
+.drop-zone::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(99,102,241,0.05) 0%, rgba(236,72,153,0.05) 100%);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.drop-zone:hover::before, .drop-zone.dragover::before { opacity: 1; }
+.drop-zone:hover, .drop-zone.dragover {
+  border-color: var(--primary);
+  background: linear-gradient(135deg, #ede9fe 0%, #e0e7ff 100%);
+  transform: scale(1.005);
+}
+.drop-zone .icon { font-size: 42px; margin-bottom: 12px; filter: drop-shadow(0 2px 4px rgba(99,102,241,0.2)); }
+.drop-zone p { font-size: 14px; color: var(--text-sub); position: relative; }
+.drop-zone .hint { font-size: 12px; color: #999; margin-top: 6px; position: relative; }
+/* File List */
+.file-list {
+  margin-top: 16px;
+}
+.file-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 8px;
+  background: linear-gradient(135deg, #fafbff 0%, #f5f3ff 100%);
+  font-size: 13px;
+  cursor: grab;
+  transition: all 0.2s;
+}
+.file-item:hover { border-color: var(--primary-light); box-shadow: 0 2px 8px rgba(99,102,241,0.08); }
+.file-item:active { cursor: grabbing; }
+.file-item .drag-handle { color: #c4b5fd; cursor: grab; }
+.file-item .file-name { flex: 1; font-weight: 500; }
+.file-item .file-size { color: var(--text-sub); font-size: 12px; }
+.file-item .file-pages { color: var(--primary); font-size: 12px; font-weight: 500; }
+.file-item .remove-btn {
+  background: none;
+  border: none;
+  color: var(--danger);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+.file-item .remove-btn:hover { background: #fef2f2; }
+/* Page Thumbnails */
+.page-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 160px));
+  gap: 16px;
+  margin-top: 16px;
+  justify-content: start;
+}
+.page-thumb {
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  display: inline-block;
+  width: fit-content;
+  background: #fff;
+}
+.page-thumb:hover { border-color: var(--primary-light); box-shadow: 0 4px 16px rgba(99,102,241,0.12); transform: translateY(-2px); }
+.page-thumb.selected { border-color: var(--primary); background: #eef2ff; box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
+.page-thumb canvas {
+  display: block;
+  background: #fff;
+}
+.page-thumb .page-num {
+  text-align: center;
+  padding: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #fafbff;
+  border-top: 1px solid var(--border);
+  color: var(--text-sub);
+}
+.page-thumb .page-check {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--accent-pink) 100%);
+  color: #fff;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  box-shadow: 0 2px 6px rgba(99,102,241,0.3);
+}
+.page-thumb.selected .page-check { display: flex; }
+.page-thumb[draggable="true"] { cursor: grab; }
+.page-thumb[draggable="true"]:active { cursor: grabbing; }
+.page-thumb.drag-over-thumb {
+  border-color: var(--primary);
+  box-shadow: 0 4px 12px rgba(26,115,232,0.3);
+  transform: scale(1.03);
+}
+.page-thumb.dragging-thumb { opacity: 0.4; }
+/* Color Presets */
+.color-presets {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.color-preset {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2.5px solid #e5e7eb;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 0;
+  background: none;
+}
+.color-preset:hover { border-color: var(--text); transform: scale(1.15); }
+.color-preset.active { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,0.25); transform: scale(1.1); }
+/* Split preview */
+.split-preview-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 0;
+  margin-top: 16px;
+  align-items: stretch;
+}
+.split-page-pair {
+  display: flex;
+  align-items: stretch;
+}
+.split-page-item {
+  width: 120px;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+.split-page-item canvas {
+  width: 100%;
+  display: block;
+  background: #fff;
+}
+.split-page-item .page-num {
+  text-align: center;
+  padding: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  background: #f8f9fa;
+  border-top: 1px solid var(--border);
+}
+.split-divider {
+  width: 28px;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+  transition: background 0.15s;
+  border-radius: 4px;
+}
+.split-divider:hover {
+  background: rgba(26,115,232,0.08);
+}
+.split-divider::before {
+  content: '';
+  width: 2px;
+  height: 70%;
+  background: #ccc;
+  border-radius: 2px;
+  transition: all 0.15s;
+  border-left: 1px dashed #bbb;
+  border-right: 1px dashed #bbb;
+  width: 0;
+}
+.split-divider:hover::before {
+  background: var(--primary);
+  width: 3px;
+  border: none;
+}
+.split-divider.active {
+  background: rgba(217,48,37,0.06);
+}
+.split-divider.active::before {
+  background: var(--danger);
+  width: 4px;
+  border: none;
+}
+.split-divider.active::after {
+  content: '✂';
+  position: absolute;
+  top: 2px;
+  font-size: 14px;
+  color: var(--danger);
+}
+.split-divider-hint {
+  position: absolute;
+  color: #bbb;
+  font-size: 18px;
+  pointer-events: none;
+  transition: color 0.15s;
+}
+.split-divider:hover .split-divider-hint {
+  color: var(--primary);
+}
+.split-divider.active .split-divider-hint {
+  display: none;
+}
+.split-page-item.group-a { border-color: #6366f1; }
+.split-page-item.group-b { border-color: #10b981; }
+.split-page-item.group-c { border-color: #8b5cf6; }
+.split-page-item.group-d { border-color: #ef4444; }
+.split-page-item.group-e { border-color: #f59e0b; }
+.split-info {
+  margin-top: 24px;
+  padding: 14px 18px;
+  background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+  border: 1px solid #c7d2fe;
+  border-radius: 12px;
+  font-size: 13px;
+  color: var(--text-sub);
+}
+.split-info strong { color: var(--text); }
+/* Compress info */
+.compress-result {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  padding: 18px;
+  background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+  border: 1px solid #bbf7d0;
+  border-radius: 12px;
+  margin-top: 12px;
+  font-size: 14px;
+}
+.compress-result .arrow { font-size: 20px; color: var(--text-sub); }
+.compress-result .size { font-weight: 600; }
+.compress-result .reduction { color: var(--success); font-weight: 700; }
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 22px;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+  position: relative;
+  overflow: hidden;
+}
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(99,102,241,0.3);
+}
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--primary-dark) 0%, #3730a3 100%);
+  box-shadow: 0 4px 16px rgba(99,102,241,0.4);
+  transform: translateY(-1px);
+}
+.btn-primary:active:not(:disabled) { transform: translateY(0); }
+.btn-secondary {
+  background: #eef2ff;
+  color: var(--primary-dark);
+  border: 1px solid #c7d2fe;
+}
+.btn-secondary:hover:not(:disabled) { background: #e0e7ff; border-color: var(--primary-light); }
+.btn-danger {
+  background: #fef2f2;
+  color: var(--danger);
+  border: 1px solid #fecaca;
+}
+.btn-danger:hover:not(:disabled) { background: #fee2e2; border-color: #fca5a5; }
+.btn-sm { padding: 7px 14px; font-size: 13px; border-radius: 8px; }
+.btn-group {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+/* Form */
+.form-group {
+  margin-bottom: 16px;
+}
+.form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--text);
+}
+.form-group input, .form-group select {
+  width: 100%;
+  padding: 9px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #fafbff;
+  transition: all 0.2s;
+}
+.form-group input:focus, .form-group select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+  background: #fff;
+}
+.form-row {
+  display: flex;
+  gap: 16px;
+}
+.form-row .form-group { flex: 1; }
+/* Progress */
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  background: #e0e7ff;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 12px;
+  display: none;
+}
+.progress-bar.show { display: block; }
+.progress-bar .fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary) 0%, var(--accent-pink) 100%);
+  border-radius: 3px;
+  transition: width 0.3s;
+  width: 0%;
+}
+/* Toast */
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+}
+.toast {
+  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+  color: #fff;
+  padding: 14px 22px;
+  border-radius: 12px;
+  font-size: 14px;
+  margin-bottom: 8px;
+  animation: slideIn 0.3s cubic-bezier(0.16,1,0.3,1);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 380px;
+  box-shadow: 0 8px 24px rgba(30,27,75,0.3);
+  backdrop-filter: blur(8px);
+}
+.toast.success { background: linear-gradient(135deg, #059669 0%, #10b981 100%); }
+.toast.error { background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%); }
+@keyframes slideIn {
+  from { transform: translateX(120%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+/* Page sections */
+.page-section { display: none; }
+.page-section.active { display: block; }
+/* Rotate controls */
+.rotate-controls {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  justify-content: center;
+}
+/* Watermark preview */
+.watermark-preview {
+  width: 200px;
+  height: 280px;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.watermark-text {
+  font-size: 24px;
+  color: rgba(200, 0, 0, 0.25);
+  transform: rotate(-45deg);
+  white-space: nowrap;
+  font-weight: bold;
+}
+/* Checkbox */
+.checkbox-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.checkbox-group label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+/* Page range input */
+.page-range-input {
+  font-family: 'Consolas', monospace;
+}
+/* Loading overlay */
+.loading-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(30,27,75,0.4);
+  backdrop-filter: blur(4px);
+  z-index: 9998;
+  align-items: center;
+  justify-content: center;
+}
+.loading-overlay.show { display: flex; }
+.loading-box {
+  background: #fff;
+  padding: 36px 52px;
+  border-radius: 20px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(99,102,241,0.2);
+}
+.spinner {
+  width: 44px;
+  height: 44px;
+  border: 4px solid #e0e7ff;
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 16px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+/* Dragging */
+.file-item.dragging { opacity: 0.4; }
+.file-item.drag-over { border-color: var(--primary); background: #e8f0fe; }
+/* Text Editor */
+.text-editor-layout {
+  display: flex;
+  gap: 20px;
+}
+.text-editor-canvas-wrap {
+  flex: 1;
+  min-width: 0;
+}
+.text-editor-sidebar {
+  width: 280px;
+  flex-shrink: 0;
+}
+.canvas-container {
+  position: relative;
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  background: #d4d4d8;
+  cursor: crosshair;
+  width: 100%;
+  height: 520px;
+  box-shadow: inset 0 2px 8px rgba(0,0,0,0.06);
+}
+.canvas-inner {
+  position: absolute;
+  top: 0; left: 0;
+  transform-origin: 0 0;
+}
+.canvas-container canvas {
+  display: block;
+}
+.canvas-container.panning {
+  cursor: grab;
+}
+.canvas-container.panning:active {
+  cursor: grabbing;
+}
+.text-overlay {
+  position: absolute;
+  cursor: move;
+  user-select: none;
+  white-space: pre;
+  line-height: 1.4;
+  font-family: 'Yu Gothic UI', 'Meiryo', sans-serif;
+}
+.text-overlay:hover, .text-overlay.active {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.text-overlay .delete-handle {
+  display: none;
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  width: 20px;
+  height: 20px;
+  background: var(--danger);
+  color: #fff;
+  border-radius: 50%;
+  font-size: 11px;
+  line-height: 20px;
+  text-align: center;
+  cursor: pointer;
+}
+.text-overlay:hover .delete-handle,
+.text-overlay.active .delete-handle { display: block; }
+.sticky-rect {
+  position: absolute;
+  border: 2px dashed rgba(0,0,0,0.3);
+  box-sizing: border-box;
+  cursor: move;
+  user-select: none;
+  z-index: 5;
+}
+.sticky-rect:hover { outline: 2px solid var(--primary); outline-offset: 1px; }
+.sticky-rect .delete-handle {
+  display: none;
+  position: absolute; top: -10px; right: -10px;
+  width: 20px; height: 20px;
+  background: var(--danger); color: #fff; border-radius: 50%;
+  font-size: 11px; line-height: 20px; text-align: center; cursor: pointer;
+}
+.sticky-rect:hover .delete-handle { display: block; }
+.sticky-rect .resize-handle {
+  position: absolute; bottom: -5px; right: -5px;
+  width: 12px; height: 12px;
+  background: var(--primary); border-radius: 2px;
+  cursor: nwse-resize; display: none;
+}
+.sticky-rect:hover .resize-handle { display: block; }
+.marker-line {
+  position: absolute;
+  pointer-events: auto;
+  cursor: move;
+  user-select: none;
+  z-index: 4;
+}
+.marker-line:hover { filter: brightness(0.85); }
+.marker-line .delete-handle {
+  display: none;
+  position: absolute; top: -12px; right: -4px;
+  width: 18px; height: 18px;
+  background: var(--danger); color: #fff; border-radius: 50%;
+  font-size: 10px; line-height: 18px; text-align: center; cursor: pointer;
+}
+.marker-line:hover .delete-handle { display: block; }
+.inline-text-input {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.92);
+  border: 2px solid var(--primary);
+  border-radius: 3px;
+  padding: 2px 4px;
+  outline: none;
+  resize: none;
+  min-width: 60px;
+  min-height: 1.4em;
+  z-index: 10;
+  overflow: hidden;
+  line-height: 1.4;
+  font-family: 'Yu Gothic UI', 'Meiryo', sans-serif;
+  box-shadow: 0 2px 8px rgba(26,115,232,0.3);
+}
+.page-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+.page-nav button {
+  padding: 6px 14px;
+}
+.page-nav span {
+  font-size: 14px;
+  font-weight: 500;
+}
+.text-entry-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+.text-entry-item {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 6px;
+  font-size: 12px;
+  background: #fafbff;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.15s;
+}
+.text-entry-item:hover { border-color: var(--primary-light); background: #eef2ff; }
+.text-entry-item.active { border-color: var(--primary); background: #e0e7ff; }
+.text-entry-item .entry-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.text-entry-item .entry-delete {
+  color: var(--danger);
+  cursor: pointer;
+  margin-left: 8px;
+  font-size: 14px;
+}
+</style>
+</head>
+<body>
+<!-- Sidebar -->
+<div class="sidebar">
+  <div class="sidebar-header">
+    <h1>PDFツール</h1>
+    <p>v1.7</p>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-item active" data-page="merge">
+      <span class="icon">📎</span>PDF結合
+    </div>
+    <div class="nav-item" data-page="split">
+      <span class="icon">✂️</span>PDF分割
+    </div>
+    <div class="nav-item" data-page="edit">
+      <span class="icon">📄</span>ページ編集
+    </div>
+    <div class="nav-item" data-page="image2pdf">
+      <span class="icon">🖼️</span>画像→PDF
+    </div>
+    <div class="nav-item" data-page="addtext">
+      <span class="icon">✏️</span>文字入力
+    </div>
+    <div class="nav-item" data-page="watermark">
+      <span class="icon">💧</span>透かし追加
+    </div>
+<div class="nav-item" data-page="info">
+      <span class="icon">ℹ️</span>PDF情報
+    </div>
+    <div class="nav-item" data-page="compress">
+      <span class="icon">📦</span>ファイル圧縮
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    ※ご利用は自己責任でお願いします<br>
+    <span style="opacity:0.6;">データは外部送信されません</span>
+  </div>
+</div>
+<!-- Main Content -->
+<div class="main">
+  <div class="main-header">
+    <h2 id="pageTitle">PDF結合</h2>
+    <span class="desc" id="pageDesc">複数のPDFファイルを1つに結合します</span>
+  </div>
+  <div class="main-content">
+    <!-- ===== PDF結合 ===== -->
+    <div class="page-section active" id="page-merge">
+      <div class="card">
+        <h3>📎 ファイルを追加</h3>
+        <div class="drop-zone" id="mergeDropZone">
+          <div class="icon">📁</div>
+          <p>ここにPDFファイルをドラッグ＆ドロップ</p>
+          <p class="hint">またはクリックしてファイルを選択（複数選択可）</p>
+          <input type="file" accept=".pdf" multiple hidden id="mergeFileInput">
+        </div>
+        <div class="file-list" id="mergeFileList"></div>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="executeMerge()" id="mergeBtn" disabled>
+          📎 結合して保存
+        </button>
+        <button class="btn btn-secondary" onclick="clearMergeFiles()">
+          クリア
+        </button>
+      </div>
+      <div class="progress-bar" id="mergeProgress"><div class="fill"></div></div>
+    </div>
+    <!-- ===== PDF分割 ===== -->
+    <div class="page-section" id="page-split">
+      <div class="card">
+        <h3>📄 PDFファイルを選択</h3>
+        <div class="drop-zone" id="splitDropZone">
+          <div class="icon">📁</div>
+          <p>ここにPDFファイルをドラッグ＆ドロップ</p>
+          <p class="hint">またはクリックしてファイルを選択</p>
+          <input type="file" accept=".pdf" hidden id="splitFileInput">
+        </div>
+        <div id="splitFileInfo" style="margin-top:12px;font-size:13px;color:var(--text-sub);"></div>
+      </div>
+      <div class="card" id="splitPreviewPanel" style="display:none;">
+        <h3>✂️ 区切り箇所をクリック
+          <span style="font-weight:400;font-size:12px;color:var(--text-sub);margin-left:8px;">
+            ページ間の区切り線をクリックして分割位置を指定
+          </span>
+        </h3>
+        <div class="btn-group" style="margin-top:0;margin-bottom:12px;">
+          <button class="btn btn-sm btn-secondary" onclick="splitClearAll()">区切りをすべて解除</button>
+          <button class="btn btn-sm btn-secondary" onclick="splitEveryN()">N頁ごとに区切り</button>
+        </div>
+        <div class="split-preview-grid" id="splitPreviewGrid"></div>
+        <div class="split-info" id="splitInfo"></div>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="executeSplit()" id="splitBtn" disabled>
+          ✂️ 分割して保存
+        </button>
+      </div>
+      <div class="progress-bar" id="splitProgress"><div class="fill"></div></div>
+    </div>
+    <!-- ===== ページ編集 ===== -->
+    <div class="page-section" id="page-edit">
+      <div class="card">
+        <h3>📄 PDFファイルを選択</h3>
+        <div class="drop-zone" id="editDropZone">
+          <div class="icon">📁</div>
+          <p>ここにPDFファイルをドラッグ＆ドロップ</p>
+          <p class="hint">またはクリックしてファイルを選択</p>
+          <input type="file" accept=".pdf" hidden id="editFileInput">
+        </div>
+      </div>
+      <div class="card" id="editPanel" style="display:none;">
+        <h3>ページ一覧
+          <span style="font-weight:400;font-size:12px;color:var(--text-sub);margin-left:8px;">
+            クリックで選択 / ドラッグで並べ替え
+          </span>
+        </h3>
+        <div class="btn-group" style="margin-top:0;margin-bottom:16px;">
+          <button class="btn btn-sm btn-secondary" onclick="selectAllPages()">全選択</button>
+          <button class="btn btn-sm btn-secondary" onclick="deselectAllPages()">選択解除</button>
+          <span style="border-left:1px solid var(--border);margin:0 4px;"></span>
+          <button class="btn btn-sm btn-secondary" onclick="rotateSelectedPages(90)">↻ 右90°</button>
+          <button class="btn btn-sm btn-secondary" onclick="rotateSelectedPages(-90)">↺ 左90°</button>
+          <button class="btn btn-sm btn-secondary" onclick="rotateSelectedPages(180)">🔄 180°</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteSelectedPages()">🗑 選択ページ削除</button>
+        </div>
+        <div class="page-grid" id="editPageGrid"></div>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="saveEditedPdf()" id="editSaveBtn" disabled>
+          💾 編集結果を保存
+        </button>
+      </div>
+      <div class="progress-bar" id="editProgress"><div class="fill"></div></div>
+    </div>
+    <!-- ===== 画像→PDF ===== -->
+    <div class="page-section" id="page-image2pdf">
+      <div class="card">
+        <h3>🖼️ 画像ファイルを追加</h3>
+        <div class="drop-zone" id="imgDropZone">
+          <div class="icon">🖼️</div>
+          <p>ここに画像ファイルをドラッグ＆ドロップ</p>
+          <p class="hint">PNG, JPEG に対応（複数選択可）</p>
+          <input type="file" accept="image/png,image/jpeg,image/jpg" multiple hidden id="imgFileInput">
+        </div>
+        <div class="file-list" id="imgFileList"></div>
+      </div>
+      <div class="card">
+        <h3>⚙️ オプション</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>ページサイズ</label>
+            <select id="imgPageSize">
+              <option value="a4">A4</option>
+              <option value="b5">B5</option>
+              <option value="letter">レター</option>
+              <option value="fit">画像に合わせる</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>向き</label>
+            <select id="imgOrientation">
+              <option value="portrait">縦</option>
+              <option value="landscape">横</option>
+              <option value="auto">自動（画像に合わせる）</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>余白 (mm)</label>
+          <input type="number" id="imgMargin" value="10" min="0" max="50">
+        </div>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="executeImage2Pdf()" id="imgBtn" disabled>
+          🖼️ PDFに変換して保存
+        </button>
+        <button class="btn btn-secondary" onclick="clearImgFiles()">クリア</button>
+      </div>
+      <div class="progress-bar" id="imgProgress"><div class="fill"></div></div>
+    </div>
+    <!-- ===== 文字入力 ===== -->
+    <div class="page-section" id="page-addtext">
+      <div class="card" id="addtextDropCard">
+        <h3>📄 PDFファイルを選択</h3>
+        <div class="drop-zone" id="addtextDropZone">
+          <div class="icon">📁</div>
+          <p>ここにPDFファイルをドラッグ＆ドロップ</p>
+          <p class="hint">またはクリックしてファイルを選択</p>
+          <input type="file" accept=".pdf" hidden id="addtextFileInput">
+        </div>
+      </div>
+      <div id="addtextEditor" style="display:none;">
+        <div class="text-editor-layout">
+          <div class="text-editor-canvas-wrap">
+            <div class="card" style="padding:12px;">
+              <div class="canvas-container" id="addtextCanvasContainer">
+                <div class="canvas-inner" id="addtextCanvasInner">
+                  <canvas id="addtextCanvas"></canvas>
+                </div>
+              </div>
+              <div class="page-nav" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                <button class="btn btn-sm btn-secondary" onclick="addtextPrevPage()">◀</button>
+                <span id="addtextPageInfo">1 / 1</span>
+                <button class="btn btn-sm btn-secondary" onclick="addtextNextPage()">▶</button>
+                <span style="border-left:1px solid #ccc;height:20px;margin:0 2px;"></span>
+                <button class="btn btn-sm btn-secondary" onclick="addtextZoom(-1)" title="縮小">−</button>
+                <span id="addtextZoomInfo" style="min-width:44px;text-align:center;font-size:13px;">100%</span>
+                <button class="btn btn-sm btn-secondary" onclick="addtextZoom(1)" title="拡大">＋</button>
+                <button class="btn btn-sm btn-secondary" onclick="addtextZoom(0)" title="フィット" style="font-size:11px;">FIT</button>
+                <span style="border-left:1px solid #ccc;height:20px;margin:0 2px;"></span>
+                <button class="btn btn-sm" id="toolText" onclick="setAddtextTool('text')" style="background:var(--primary);color:#fff;" title="テキスト入力">✏️ 文字</button>
+                <button class="btn btn-sm btn-secondary" id="toolMarker" onclick="setAddtextTool('marker')" title="ラインマーカー">🖍️ マーカー</button>
+                <button class="btn btn-sm btn-secondary" id="toolSticky" onclick="setAddtextTool('sticky')" title="付箋（マスキング）">📌 付箋</button>
+                <button class="btn btn-sm btn-secondary" id="toolHand" onclick="setAddtextTool('hand')" title="手のひら（パン移動）">✋</button>
+              </div>
+            </div>
+          </div>
+          <div class="text-editor-sidebar">
+            <div class="card">
+              <h3>✏️ 入力設定</h3>
+              <div class="form-group">
+                <label>フォント</label>
+                <select id="addtextFontFamily" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px;" onchange="this.style.fontFamily=FONT_CSS_FAMILIES[this.value]||'sans-serif'">
+                  <option value="NotoSansJP" style="font-family:'Noto Sans JP',sans-serif">Noto Sans JP（ゴシック）</option>
+                  <option value="NotoSerifJP" style="font-family:'Noto Serif JP',serif">Noto Serif JP（明朝）</option>
+                  <option value="ZenMaruGothic" style="font-family:'Zen Maru Gothic',sans-serif">Zen Maru Gothic（丸ゴシック）</option>
+                  <option value="ZenKakuGothicNew" style="font-family:'Zen Kaku Gothic New',sans-serif">Zen Kaku Gothic New（角ゴシック）</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>フォントサイズ (pt)</label>
+                <input type="number" id="addtextFontSize" value="12" min="6" max="120">
+              </div>
+              <div class="form-group">
+                <label>色</label>
+                <div class="color-presets" id="colorPresets">
+                  <button class="color-preset active" data-color="#000000" style="background:#000000;" title="黒"></button>
+                  <button class="color-preset" data-color="#d93025" style="background:#d93025;" title="赤"></button>
+                  <button class="color-preset" data-color="#1a73e8" style="background:#1a73e8;" title="青"></button>
+                  <button class="color-preset" data-color="#0d904f" style="background:#0d904f;" title="緑"></button>
+                  <button class="color-preset" data-color="#f9ab00" style="background:#f9ab00;" title="オレンジ"></button>
+                  <button class="color-preset" data-color="#9334e6" style="background:#9334e6;" title="紫"></button>
+                  <button class="color-preset" data-color="#185abc" style="background:#185abc;" title="紺"></button>
+                  <button class="color-preset" data-color="#5f6368" style="background:#5f6368;" title="グレー"></button>
+                </div>
+                <input type="color" id="addtextColor" value="#000000" style="width:100%;height:30px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;">
+              </div>
+              <div id="markerSettings" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
+                <h3 style="margin-bottom:6px;">🖍️ マーカー設定</h3>
+                <div class="form-group">
+                  <label>色</label>
+                  <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                    <button class="color-preset marker-color active" data-mcolor="#ffff00" style="background:#ffff00;" title="黄"></button>
+                    <button class="color-preset marker-color" data-mcolor="#ff9ebc" style="background:#ff9ebc;" title="桃"></button>
+                    <button class="color-preset marker-color" data-mcolor="#81d4fa" style="background:#81d4fa;" title="水色"></button>
+                    <button class="color-preset marker-color" data-mcolor="#a5d6a7" style="background:#a5d6a7;" title="緑"></button>
+                    <button class="color-preset marker-color" data-mcolor="#ce93d8" style="background:#ce93d8;" title="紫"></button>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>太さ (pt)</label>
+                  <input type="number" id="markerThickness" value="12" min="4" max="40" style="width:80px;">
+                </div>
+                <div style="font-size:11px;color:var(--text-sub);margin-top:2px;">ドラッグで水平にまっすぐ引けます</div>
+              </div>
+              <div id="stickySettings" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
+                <h3 style="margin-bottom:6px;">📌 付箋設定</h3>
+                <div class="form-group">
+                  <label>色</label>
+                  <div style="display:flex;gap:4px;flex-wrap:wrap;">
+                    <button class="color-preset sticky-color active" data-scolor="#ffffff" style="background:#ffffff;border:1px solid #ccc;" title="白"></button>
+                    <button class="color-preset sticky-color" data-scolor="#fffde7" style="background:#fffde7;" title="黄"></button>
+                    <button class="color-preset sticky-color" data-scolor="#e8f5e9" style="background:#e8f5e9;" title="緑"></button>
+                    <button class="color-preset sticky-color" data-scolor="#e3f2fd" style="background:#e3f2fd;" title="青"></button>
+                    <button class="color-preset sticky-color" data-scolor="#fce4ec" style="background:#fce4ec;" title="桃"></button>
+                    <button class="color-preset sticky-color" data-scolor="#f3e5f5" style="background:#f3e5f5;" title="紫"></button>
+                    <button class="color-preset sticky-color" data-scolor="#e0e0e0" style="background:#e0e0e0;" title="灰"></button>
+                    <button class="color-preset sticky-color" data-scolor="#000000" style="background:#000000;" title="黒"></button>
+                  </div>
+                  <input type="color" id="stickyColor" value="#ffffff" style="width:100%;height:28px;padding:2px;border:1px solid var(--border);border-radius:6px;cursor:pointer;margin-top:4px;">
+                </div>
+              </div>
+              <div style="font-size:12px;color:var(--text-sub);line-height:1.8;margin-top:4px;">
+                <b>使い方：</b><br>
+                ✏️ 文字: クリック → 入力 → Ctrl+Enter確定<br>
+                🖍️ マーカー: ドラッグで水平ライン<br>
+                📌 付箋: ドラッグで範囲選択（マスキング用）<br>
+                ✋ 手のひら: ドラッグでスクロール<br>
+                ※ ホイールで拡大縮小
+              </div>
+            </div>
+            <div class="card">
+              <h3>📝 配置済みオブジェクト
+                <span style="font-weight:400;font-size:12px;color:var(--text-sub);margin-left:4px;" id="addtextCount">(0件)</span>
+              </h3>
+              <div class="text-entry-list" id="addtextEntryList">
+                <p style="font-size:13px;color:var(--text-sub);">まだ配置されていません</p>
+              </div>
+            </div>
+            <div class="btn-group">
+              <button class="btn btn-primary" onclick="saveAddtextPdf()" id="addtextSaveBtn">
+                💾 保存
+              </button>
+              <button class="btn btn-secondary" onclick="resetAddtext()">
+                別のPDF
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- ===== 透かし追加 ===== -->
+    <div class="page-section" id="page-watermark">
+      <div class="card">
+        <h3>📄 PDFファイルを選択</h3>
+        <div class="drop-zone" id="wmDropZone">
+          <div class="icon">📁</div>
+          <p>ここにPDFファイルをドラッグ＆ドロップ</p>
+          <p class="hint">またはクリックしてファイルを選択</p>
+          <input type="file" accept=".pdf" hidden id="wmFileInput">
+        </div>
+        <div id="wmFileInfo" style="margin-top:12px;font-size:13px;color:var(--text-sub);"></div>
+      </div>
+      <div class="card">
+        <h3>💧 透かし設定</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>テキスト</label>
+            <input type="text" id="wmText" value="社外秘" oninput="updateWmPreview()">
+          </div>
+          <div class="form-group">
+            <label>フォントサイズ</label>
+            <input type="number" id="wmFontSize" value="60" min="10" max="200" oninput="updateWmPreview()">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>色</label>
+            <select id="wmColor" onchange="updateWmPreview()">
+              <option value="red">赤</option>
+              <option value="gray">グレー</option>
+              <option value="blue">青</option>
+              <option value="black">黒</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>透明度 (%)</label>
+            <input type="number" id="wmOpacity" value="20" min="5" max="80" oninput="updateWmPreview()">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>角度 (°)</label>
+          <input type="number" id="wmAngle" value="-45" min="-180" max="180" oninput="updateWmPreview()">
+        </div>
+        <div style="margin-top:16px;">
+          <label style="font-size:13px;font-weight:500;margin-bottom:8px;display:block;">プレビュー</label>
+          <div class="watermark-preview">
+            <div class="watermark-text" id="wmPreviewText">社外秘</div>
+          </div>
+        </div>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="executeWatermark()" id="wmBtn" disabled>
+          💧 透かしを追加して保存
+        </button>
+      </div>
+      <div class="progress-bar" id="wmProgress"><div class="fill"></div></div>
+    </div>
+    <!-- ===== PDF情報 ===== -->
+    <div class="page-section" id="page-info">
+      <div class="card">
+        <h3>📄 PDFファイルを選択</h3>
+        <div class="drop-zone" id="infoDropZone">
+          <div class="icon">📁</div>
+          <p>ここにPDFファイルをドラッグ＆ドロップ</p>
+          <p class="hint">またはクリックしてファイルを選択</p>
+          <input type="file" accept=".pdf" hidden id="infoFileInput">
+        </div>
+      </div>
+      <div class="card" id="infoPanel" style="display:none;">
+        <h3>ℹ️ ファイル情報</h3>
+        <table style="width:100%;border-collapse:collapse;" id="infoTable">
+        </table>
+      </div>
+    </div>
+    <!-- ===== ファイル圧縮 ===== -->
+    <div class="page-section" id="page-compress">
+      <div class="card">
+        <h3>📄 PDFファイルを選択</h3>
+        <div class="drop-zone" id="compressDropZone">
+          <div class="icon">📁</div>
+          <p>ここにPDFファイルをドラッグ＆ドロップ</p>
+          <p class="hint">またはクリックしてファイルを選択</p>
+          <input type="file" accept=".pdf" hidden id="compressFileInput">
+        </div>
+        <div id="compressFileInfo" style="margin-top:12px;font-size:13px;color:var(--text-sub);"></div>
+      </div>
+      <div class="card">
+        <h3>⚙️ 圧縮設定</h3>
+        <div class="form-group">
+          <label>圧縮モード</label>
+          <select id="compressMode" onchange="updateCompressUI()">
+            <option value="standard">標準圧縮（推奨）</option>
+            <option value="high">高圧縮（ファイルサイズ優先）</option>
+            <option value="low">軽量圧縮（画質優先）</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>画質 <span id="compressQualityLabel">85</span>%</label>
+            <input type="range" id="compressQuality" value="85" min="30" max="100" step="5"
+              style="width:100%;" oninput="document.getElementById('compressQualityLabel').textContent=this.value">
+          </div>
+          <div class="form-group">
+            <label>解像度 (DPI)</label>
+            <select id="compressDpi">
+              <option value="72">72 DPI（画面表示向け）</option>
+              <option value="150" selected>150 DPI（標準）</option>
+              <option value="200">200 DPI（やや高画質）</option>
+              <option value="300">300 DPI（印刷向け・高画質）</option>
+            </select>
+          </div>
+        </div>
+        <p style="font-size:12px;color:var(--text-sub);line-height:1.6;">
+          ※ 各ページを画像化してJPEGで再構成することでサイズを削減します。<br>
+          ※ テキスト検索・コピーはできなくなりますのでご注意ください。
+        </p>
+        <div id="compressResult" style="display:none;"></div>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="executeCompress()" id="compressBtn" disabled>
+          📦 圧縮して保存
+        </button>
+      </div>
+      <div class="progress-bar" id="compressProgress"><div class="fill"></div></div>
+    </div>
+  </div>
+</div>
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-box">
+    <div class="spinner"></div>
+    <p id="loadingText">処理中...</p>
+  </div>
+</div>
+<script>
+// ============================================================
+// Global State
+// ============================================================
+const { PDFDocument, rgb, degrees, StandardFonts } = PDFLib;
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+const state = {
+  merge: { files: [] },
+  split: { file: null, pageCount: 0, dividers: new Set() },
+  edit: { file: null, originalBytes: null, pdfDoc: null, pageCount: 0, pageOrder: [], rotations: {}, deleted: new Set(), selected: new Set() },
+  image2pdf: { files: [] },
+  addtext: { file: null, originalBytes: null, pdfBytes: null, pageCount: 0, currentPage: 1, scale: 1, zoomLevel: 0, panX: 0, panY: 0, pageWidth: 0, pageHeight: 0, entries: [], stickies: [], markers: [], activeInput: null, tool: 'text' },
+  watermark: { file: null },
+  info: { file: null },
+  compress: { file: null },
+};
+// ============================================================
+// Navigation
+// ============================================================
+const pageTitles = {
+  merge: ['PDF結合', '複数のPDFファイルを1つに結合します'],
+  split: ['PDF分割', 'PDFファイルを複数ファイルに分割します'],
+  edit: ['ページ編集', 'ページの回転・削除・並べ替えができます'],
+  image2pdf: ['画像→PDF', '画像ファイルをPDFに変換します'],
+  addtext: ['文字入力', 'PDFページ上にテキストを配置します'],
+  watermark: ['透かし追加', 'PDFに透かし文字を追加します'],
+  info: ['PDF情報', 'PDFファイルの情報を表示します'],
+  compress: ['ファイル圧縮', 'PDFファイルのサイズを削減します'],
+};
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    const page = item.dataset.page;
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    item.classList.add('active');
+    document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+    document.getElementById('page-' + page).classList.add('active');
+    document.getElementById('pageTitle').textContent = pageTitles[page][0];
+    document.getElementById('pageDesc').textContent = pageTitles[page][1];
+  });
+});
+// ============================================================
+// Utilities
+// ============================================================
+function showToast(msg, type = '') {
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 3000);
+}
+function showLoading(text = '処理中...') {
+  document.getElementById('loadingText').textContent = text;
+  document.getElementById('loadingOverlay').classList.add('show');
+}
+function hideLoading() {
+  document.getElementById('loadingOverlay').classList.remove('show');
+}
+function formatSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / 1048576).toFixed(1) + ' MB';
+}
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+async function readFileAsArrayBuffer(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsArrayBuffer(file);
+  });
+}
+// 暗号化PDFやCIDFont入りPDFの安全な読み込み
+async function loadPdf(data, extraOpts = {}) {
+  // 元のArrayBufferが変更されないよう必ずコピーしてからloadする
+  // （pdf-libはUint8Arrayビューを作成し、内部パース時にバイトを変更する場合がある）
+  const copy = (data instanceof ArrayBuffer) ? data.slice(0) : new Uint8Array(data).buffer;
+  return PDFDocument.load(copy, { ignoreEncryption: true, ...extraOpts });
+}
+function parsePageRange(rangeStr, maxPage) {
+  const pages = new Set();
+  const parts = rangeStr.split(',');
+  for (const part of parts) {
+    const trimmed = part.trim();
+    if (!trimmed) continue;
+    const match = trimmed.match(/^(\d+)\s*-\s*(\d+)$/);
+    if (match) {
+      const start = parseInt(match[1]);
+      const end = parseInt(match[2]);
+      for (let i = Math.max(1, start); i <= Math.min(maxPage, end); i++) pages.add(i);
+    } else {
+      const num = parseInt(trimmed);
+      if (num >= 1 && num <= maxPage) pages.add(num);
+    }
+  }
+  return [...pages].sort((a, b) => a - b);
+}
+// ============================================================
+// Drop Zone Setup
+// ============================================================
+function setupDropZone(zoneId, inputId, onFiles) {
+  const zone = document.getElementById(zoneId);
+  const input = document.getElementById(inputId);
+  zone.addEventListener('click', () => input.click());
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('dragover');
+    const files = [...e.dataTransfer.files];
+    onFiles(files);
+  });
+  input.addEventListener('change', () => {
+    const files = [...input.files];
+    onFiles(files);
+    input.value = '';
+  });
+}
+// ============================================================
+// Thumbnail rendering
+// ============================================================
+async function renderPageThumbnail(pdfBytes, pageNum, canvas, maxSize = 160, rotation = 0) {
+  const loadingTask = pdfjsLib.getDocument({ data: pdfBytes, cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/', cMapPacked: true });
+  const pdf = await loadingTask.promise;
+  const page = await pdf.getPage(pageNum);
+  const vp = page.getViewport({ scale: 1, rotation });
+  // 長辺をmaxSizeに合わせる
+  const scale = maxSize / Math.max(vp.width, vp.height);
+  const viewport = page.getViewport({ scale, rotation });
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+  canvas.style.width = viewport.width + 'px';
+  canvas.style.height = viewport.height + 'px';
+  const ctx = canvas.getContext('2d');
+  await page.render({ canvasContext: ctx, viewport }).promise;
+  pdf.destroy();
+}
+// ============================================================
+// 1. PDF結合
+// ============================================================
+setupDropZone('mergeDropZone', 'mergeFileInput', async (files) => {
+  const pdfFiles = files.filter(f => f.name.toLowerCase().endsWith('.pdf'));
+  if (pdfFiles.length === 0) { showToast('PDFファイルを選択してください', 'error'); return; }
+  for (const f of pdfFiles) {
+    const buf = await readFileAsArrayBuffer(f);
+    const doc = await loadPdf(buf);
+    state.merge.files.push({ name: f.name, size: f.size, data: buf, pageCount: doc.getPageCount() });
+  }
+  renderMergeFileList();
+});
+function renderMergeFileList() {
+  const list = document.getElementById('mergeFileList');
+  list.innerHTML = '';
+  state.merge.files.forEach((f, i) => {
+    const item = document.createElement('div');
+    item.className = 'file-item';
+    item.draggable = true;
+    item.dataset.index = i;
+    item.innerHTML = `
+      <span class="drag-handle">⠿</span>
+      <span class="file-name">${f.name}</span>
+      <span class="file-pages">${f.pageCount}ページ</span>
+      <span class="file-size">${formatSize(f.size)}</span>
+      <button class="remove-btn" onclick="removeMergeFile(${i})">✕</button>
+    `;
+    // Drag & drop reorder
+    item.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', i); item.classList.add('dragging'); });
+    item.addEventListener('dragend', () => item.classList.remove('dragging'));
+    item.addEventListener('dragover', e => { e.preventDefault(); item.classList.add('drag-over'); });
+    item.addEventListener('dragleave', () => item.classList.remove('drag-over'));
+    item.addEventListener('drop', e => {
+      e.preventDefault();
+      item.classList.remove('drag-over');
+      const fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
+      const toIdx = parseInt(item.dataset.index);
+      if (fromIdx !== toIdx) {
+        const [moved] = state.merge.files.splice(fromIdx, 1);
+        state.merge.files.splice(toIdx, 0, moved);
+        renderMergeFileList();
+      }
+    });
+    list.appendChild(item);
+  });
+  document.getElementById('mergeBtn').disabled = state.merge.files.length < 2;
+}
+function removeMergeFile(idx) {
+  state.merge.files.splice(idx, 1);
+  renderMergeFileList();
+}
+function clearMergeFiles() {
+  state.merge.files = [];
+  renderMergeFileList();
+}
+async function executeMerge() {
+  if (state.merge.files.length < 2) return;
+  showLoading('PDFを結合中...');
+  try {
+    const merged = await PDFDocument.create();
+    for (const f of state.merge.files) {
+      const src = await loadPdf(f.data);
+      const pages = await merged.copyPages(src, src.getPageIndices());
+      pages.forEach(p => merged.addPage(p));
+    }
+    const bytes = await merged.save();
+    downloadBlob(new Blob([bytes], { type: 'application/pdf' }), '結合済み.pdf');
+    showToast('PDF結合が完了しました', 'success');
+  } catch (e) {
+    showToast('エラー: ' + e.message, 'error');
+  }
+  hideLoading();
+}
+// ============================================================
+// 2. PDF分割
+// ============================================================
+setupDropZone('splitDropZone', 'splitFileInput', async (files) => {
+  const f = files.find(f => f.name.toLowerCase().endsWith('.pdf'));
+  if (!f) { showToast('PDFファイルを選択してください', 'error'); return; }
+  showLoading('ページを読み込み中...');
+  try {
+    const buf = await readFileAsArrayBuffer(f);
+    const doc = await loadPdf(buf);
+    state.split.file = { name: f.name, data: buf };
+    state.split.pageCount = doc.getPageCount();
+    state.split.dividers = new Set();
+    document.getElementById('splitFileInfo').textContent = `${f.name} (${state.split.pageCount}ページ)`;
+    await renderSplitPreview();
+    document.getElementById('splitPreviewPanel').style.display = '';
+    document.getElementById('splitBtn').disabled = false;
+  } catch (e) {
+    showToast('エラー: ' + e.message, 'error');
+  }
+  hideLoading();
+});
+const splitGroupColors = ['group-a', 'group-b', 'group-c', 'group-d', 'group-e'];
+async function renderSplitPreview() {
+  const grid = document.getElementById('splitPreviewGrid');
+  grid.innerHTML = '';
+  const total = state.split.pageCount;
+  const data = new Uint8Array(state.split.file.data);
+  for (let i = 0; i < total; i++) {
+    // ページ+区切り線をペアで包む（折り返し時に分離しない）
+    const pair = document.createElement('div');
+    pair.className = 'split-page-pair';
+    // ページサムネイル
+    const pageItem = document.createElement('div');
+    pageItem.className = 'split-page-item';
+    pageItem.dataset.pageIndex = i;
+    const canvas = document.createElement('canvas');
+    const pageNum = document.createElement('div');
+    pageNum.className = 'page-num';
+    pageNum.textContent = `${i + 1}`;
+    pageItem.appendChild(canvas);
+    pageItem.appendChild(pageNum);
+    pair.appendChild(pageItem);
+    // ページ間の区切り（最後のページの後には不要）
+    if (i < total - 1) {
+      const divider = document.createElement('div');
+      divider.className = 'split-divider' + (state.split.dividers.has(i) ? ' active' : '');
+      divider.dataset.afterPage = i;
+      divider.title = `${i + 1}ページと${i + 2}ページの間で区切る`;
+      // ヒントアイコン
+      const hint = document.createElement('span');
+      hint.className = 'split-divider-hint';
+      hint.textContent = '|';
+      divider.appendChild(hint);
+      divider.addEventListener('click', () => {
+        const idx = parseInt(divider.dataset.afterPage);
+        if (state.split.dividers.has(idx)) {
+          state.split.dividers.delete(idx);
+        } else {
+          state.split.dividers.add(idx);
+        }
+        updateSplitVisuals();
+      });
+      pair.appendChild(divider);
+    }
+    grid.appendChild(pair);
+    renderPageThumbnail(data.slice().buffer, i + 1, canvas, 120).catch(() => {});
+  }
+  updateSplitVisuals();
+}
+function updateSplitVisuals() {
+  const total = state.split.pageCount;
+  const dividers = state.split.dividers;
+  // 区切り線の表示更新
+  document.querySelectorAll('#splitPreviewGrid .split-divider').forEach(el => {
+    const idx = parseInt(el.dataset.afterPage);
+    el.classList.toggle('active', dividers.has(idx));
+  });
+  // グループ分けを計算
+  const groups = [];
+  let groupStart = 0;
+  const sortedDividers = [...dividers].sort((a, b) => a - b);
+  for (const d of sortedDividers) {
+    groups.push({ start: groupStart, end: d });
+    groupStart = d + 1;
+  }
+  groups.push({ start: groupStart, end: total - 1 });
+  // ページ枠の色分け
+  document.querySelectorAll('#splitPreviewGrid .split-page-item').forEach(el => {
+    const idx = parseInt(el.dataset.pageIndex);
+    // 既存のグループクラスを削除
+    splitGroupColors.forEach(c => el.classList.remove(c));
+    const gi = groups.findIndex(g => idx >= g.start && idx <= g.end);
+    if (gi >= 0 && groups.length > 1) {
+      el.classList.add(splitGroupColors[gi % splitGroupColors.length]);
+    }
+  });
+  // 情報表示
+  const info = document.getElementById('splitInfo');
+  if (dividers.size === 0) {
+    info.innerHTML = 'ページ間の区切り線をクリックすると、その位置でPDFが分割されます。';
+  } else {
+    const parts = groups.map((g, i) => {
+      const range = g.start === g.end ? `${g.start + 1}` : `${g.start + 1}-${g.end + 1}`;
+      return `<strong>ファイル${i + 1}</strong>: ${range}ページ (${g.end - g.start + 1}頁)`;
+    });
+    info.innerHTML = `${groups.length}個のファイルに分割: ${parts.join(' ')}`;
+  }
+}
+function splitClearAll() {
+  state.split.dividers.clear();
+  updateSplitVisuals();
+  showToast('区切りをすべて解除しました');
+}
+function splitEveryN() {
+  const n = prompt('何ページごとに区切りますか？', '5');
+  if (!n) return;
+  const every = parseInt(n);
+  if (isNaN(every) || every < 1) { showToast('正しい数値を入力してください', 'error'); return; }
+  state.split.dividers.clear();
+  for (let i = every - 1; i < state.split.pageCount - 1; i += every) {
+    state.split.dividers.add(i);
+  }
+  updateSplitVisuals();
+  showToast(`${every}ページごとに区切りを設定しました`);
+}
+async function executeSplit() {
+  if (!state.split.file) return;
+  const dividers = state.split.dividers;
+  if (dividers.size === 0) {
+    showToast('区切り箇所を指定してください。ページ間の線をクリックしてください。', 'error');
+    return;
+  }
+  showLoading('PDFを分割中...');
+  try {
+    const total = state.split.pageCount;
+    const baseName = state.split.file.name.replace(/\.pdf$/i, '');
+    const sortedDividers = [...dividers].sort((a, b) => a - b);
+    // グループ算出
+    const groups = [];
+    let groupStart = 0;
+    for (const d of sortedDividers) {
+      groups.push({ start: groupStart, end: d });
+      groupStart = d + 1;
+    }
+    groups.push({ start: groupStart, end: total - 1 });
+    // 各グループをremovePageで分割出力（CIDFont保持）
+    for (let gi = 0; gi < groups.length; gi++) {
+      showLoading(`ファイル ${gi + 1}/${groups.length} を作成中...`);
+      const g = groups[gi];
+      const doc = await loadPdf(state.split.file.data);
+      for (let j = doc.getPageCount() - 1; j >= 0; j--) {
+        if (j < g.start || j > g.end) doc.removePage(j);
+      }
+      const bytes = await doc.save();
+      const range = g.start === g.end ? `${g.start + 1}` : `${g.start + 1}-${g.end + 1}`;
+      downloadBlob(new Blob([bytes], { type: 'application/pdf' }), `${baseName}_${range}.pdf`);
+    }
+    showToast(`${groups.length}個のファイルに分割しました`, 'success');
+  } catch (e) {
+    showToast('エラー: ' + e.message, 'error');
+  }
+  hideLoading();
+}
+// ============================================================
+// 3. ページ編集
+// ============================================================
+setupDropZone('editDropZone', 'editFileInput', async (files) => {
+  const f = files.find(f => f.name.toLowerCase().endsWith('.pdf'));
+  if (!f) { showToast('PDFファイルを選択してください', 'error'); return; }
+  showLoading('ページを読み込み中...');
+  try {
+    const buf = await readFileAsArrayBuffer(f);
+    state.edit.originalBytes = buf.slice(0); // 保存用の原本コピー（絶対に変更しない）
+    state.edit.file = { name: f.name, data: buf };
+    state.edit.pdfDoc = await loadPdf(buf);
+    state.edit.pageCount = state.edit.pdfDoc.getPageCount();
+    state.edit.rotations = {};
+    state.edit.deleted = new Set();
+    state.edit.selected = new Set();
+    state.edit.pageOrder = Array.from({length: state.edit.pageCount}, (_, i) => i);
+    await renderEditPageGrid();
+    document.getElementById('editPanel').style.display = '';
+    document.getElementById('editSaveBtn').disabled = false;
+  } catch (e) {
+    showToast('エラー: ' + e.message, 'error');
+  }
+  hideLoading();
+});
+async function renderEditPageGrid() {
+  const grid = document.getElementById('editPageGrid');
+  grid.innerHTML = '';
+  const data = new Uint8Array(state.edit.file.data);
+  state.edit.pageOrder.forEach((origIdx, orderPos) => {
+    const thumb = document.createElement('div');
+    thumb.className = 'page-thumb' + (state.edit.selected.has(origIdx) ? ' selected' : '');
+    thumb.dataset.pageIndex = origIdx;
+    thumb.dataset.orderPos = orderPos;
+    thumb.draggable = true;
+    const canvas = document.createElement('canvas');
+    const pageNum = document.createElement('div');
+    pageNum.className = 'page-num';
+    const rot = state.edit.rotations[origIdx] || 0;
+    pageNum.textContent = `${origIdx + 1}ページ` + (rot ? ` (${rot}°)` : '');
+    const check = document.createElement('div');
+    check.className = 'page-check';
+    check.textContent = '✓';
+    thumb.appendChild(canvas);
+    thumb.appendChild(pageNum);
+    thumb.appendChild(check);
+    // Click to select (Ctrl/Shift+click で複数選択、通常クリックで単一選択)
+    thumb.addEventListener('click', (e) => {
+      if (thumb.classList.contains('dragging-thumb')) return;
+      if (e.ctrlKey || e.metaKey || e.shiftKey) {
+        // 複数選択モード: トグル
+        togglePageSelection(origIdx);
+      } else {
+        // 単一選択モード: 他を解除してトグル
+        if (state.edit.selected.has(origIdx) && state.edit.selected.size === 1) {
+          state.edit.selected.delete(origIdx);
+        } else {
+          state.edit.selected.clear();
+          state.edit.selected.add(origIdx);
+        }
+        updateEditSelection();
+      }
+    });
+    // Drag & drop reorder
+    thumb.addEventListener('dragstart', (e) => {
+      e.dataTransfer.setData('text/plain', orderPos);
+      e.dataTransfer.effectAllowed = 'move';
+      setTimeout(() => thumb.classList.add('dragging-thumb'), 0);
+    });
+    thumb.addEventListener('dragend', () => {
+      thumb.classList.remove('dragging-thumb');
+      grid.querySelectorAll('.page-thumb').forEach(el => el.classList.remove('drag-over-thumb'));
+    });
+    thumb.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      grid.querySelectorAll('.page-thumb').forEach(el => el.classList.remove('drag-over-thumb'));
+      thumb.classList.add('drag-over-thumb');
+    });
+    thumb.addEventListener('dragleave', () => {
+      thumb.classList.remove('drag-over-thumb');
+    });
+    thumb.addEventListener('drop', (e) => {
+      e.preventDefault();
+      thumb.classList.remove('drag-over-thumb');
+      const fromPos = parseInt(e.dataTransfer.getData('text/plain'));
+      const toPos = parseInt(thumb.dataset.orderPos);
+      if (fromPos !== toPos) {
+        const [moved] = state.edit.pageOrder.splice(fromPos, 1);
+        state.edit.pageOrder.splice(toPos, 0, moved);
+        renderEditPageGrid();
+        showToast('ページ順序を変更しました');
+      }
+    });
+    grid.appendChild(thumb);
+    renderPageThumbnail(data.slice().buffer, origIdx + 1, canvas, 140, rot).catch(() => {});
+  });
+}
+function togglePageSelection(pageIdx) {
+  if (state.edit.selected.has(pageIdx)) {
+    state.edit.selected.delete(pageIdx);
+  } else {
+    state.edit.selected.add(pageIdx);
+  }
+  updateEditSelection();
+}
+function selectAllPages() {
+  state.edit.pageOrder.forEach(i => state.edit.selected.add(i));
+  updateEditSelection();
+}
+function deselectAllPages() {
+  state.edit.selected.clear();
+  updateEditSelection();
+}
+function updateEditSelection() {
+  document.querySelectorAll('#editPageGrid .page-thumb').forEach(el => {
+    const idx = parseInt(el.dataset.pageIndex);
+    el.classList.toggle('selected', state.edit.selected.has(idx));
+  });
+}
+function rotateSelectedPages(deg) {
+  if (state.edit.selected.size === 0) { showToast('ページを選択してください', 'error'); return; }
+  const count = state.edit.selected.size;
+  const data = new Uint8Array(state.edit.file.data);
+  state.edit.selected.forEach(idx => {
+    state.edit.rotations[idx] = ((state.edit.rotations[idx] || 0) + deg + 360) % 360;
+  });
+  // 該当サムネイルだけ再描画（全体リロードしない）
+  document.querySelectorAll('#editPageGrid .page-thumb').forEach(el => {
+    const idx = parseInt(el.dataset.pageIndex);
+    if (!state.edit.selected.has(idx)) return;
+    const rot = state.edit.rotations[idx] || 0;
+    el.querySelector('.page-num').textContent = `${idx + 1}ページ` + (rot ? ` (${rot}°)` : '');
+    const canvas = el.querySelector('canvas');
+    renderPageThumbnail(data.slice().buffer, idx + 1, canvas, 140, rot).catch(() => {});
+  });
+  // 回転後は選択を解除
+  state.edit.selected.clear();
+  updateEditSelection();
+  const label = deg === 180 ? '180°' : (deg > 0 ? '右' : '左');
+  showToast(`${count}ページを${label}回転しました`);
+}
+function deleteSelectedPages() {
+  if (state.edit.selected.size === 0) { showToast('ページを選択してください', 'error'); return; }
+  const remaining = state.edit.pageOrder.filter(i => !state.edit.selected.has(i));
+  if (remaining.length < 1) { showToast('少なくとも1ページは残す必要があります', 'error'); return; }
+  state.edit.pageOrder = remaining;
+  state.edit.selected.forEach(idx => state.edit.deleted.add(idx));
+  state.edit.selected.clear();
+  renderEditPageGrid();
+  showToast('選択ページを削除しました');
+}
+async function saveEditedPdf() {
+  showLoading('PDFを保存中...');
+  try {
+    const pageOrder = state.edit.pageOrder;
+const srcDoc = await loadPdf(state.edit.file.data);
+    // 変更なしチェック: そのまま元データを出力
+    const noChanges = pageOrder.length === srcDoc.getPageCount() &&
+      pageOrder.every((v, i) => v === i) &&
+      pageOrder.every(i => !state.edit.rotations[i]);
+    if (noChanges) {
+      const baseName = state.edit.file.name.replace(/\.pdf$/i, '');
+      downloadBlob(new Blob([new Uint8Array(state.edit.file.data)], { type: 'application/pdf' }), `${baseName}_編集済み.pdf`);
+      showToast('PDFを保存しました', 'success');
+      hideLoading();
+      return;
+    }
+    pageOrder.forEach(origIdx => {
+      const rot = state.edit.rotations[origIdx] || 0;
+      if (rot) {
+        const page = srcDoc.getPage(origIdx);
+        const currentRot = page.getRotation().angle;
+        page.setRotation(degrees(currentRot + rot));
+      }
+    });
+    const newDoc = await PDFDocument.create();
+    const copiedPages = await newDoc.copyPages(srcDoc, pageOrder);
+    copiedPages.forEach(p => newDoc.addPage(p));
+    const bytes = await newDoc.save();
+    const baseName = state.edit.file.name.replace(/\.pdf$/i, '');
+    downloadBlob(new Blob([bytes], { type: 'application/pdf' }), `${baseName}_編集済み.pdf`);
+    showToast('保存しました（pdf-lib - 日本語フォント破損の可能性あり）', 'warning');
+  } catch (e) {
+    showToast('エラー: ' + e.message, 'error');
+  }
+  hideLoading();
+}
+// ============================================================
+// 4. 画像→PDF
+// ============================================================
+setupDropZone('imgDropZone', 'imgFileInput', async (files) => {
+  const imgFiles = files.filter(f => /\.(png|jpg|jpeg)$/i.test(f.name));
+  if (imgFiles.length === 0) { showToast('PNG/JPEGファイルを選択してください', 'error'); return; }
+  for (const f of imgFiles) {
+    const buf = await readFileAsArrayBuffer(f);
+    state.image2pdf.files.push({ name: f.name, size: f.size, data: buf, type: f.type });
+  }
+  renderImgFileList();
+});
+function renderImgFileList() {
+  const list = document.getElementById('imgFileList');
+  list.innerHTML = '';
+  state.image2pdf.files.forEach((f, i) => {
+    const item = document.createElement('div');
+    item.className = 'file-item';
+    item.draggable = true;
+    item.dataset.index = i;
+    item.innerHTML = `
+      <span class="drag-handle">⠿</span>
+      <span class="file-name">${f.name}</span>
+      <span class="file-size">${formatSize(f.size)}</span>
+      <button class="remove-btn" onclick="removeImgFile(${i})">✕</button>
+    `;
+    item.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', i); item.classList.add('dragging'); });
+    item.addEventListener('dragend', () => item.classList.remove('dragging'));
+    item.addEventListener('dragover', e => { e.preventDefault(); item.classList.add('drag-over'); });
+    item.addEventListener('dragleave', () => item.classList.remove('drag-over'));
+    item.addEventListener('drop', e => {
+      e.preventDefault();
+      item.classList.remove('drag-over');
+      const fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
+      const toIdx = parseInt(item.dataset.index);
+      if (fromIdx !== toIdx) {
+        const [moved] = state.image2pdf.files.splice(fromIdx, 1);
+        state.image2pdf.files.splice(toIdx, 0, moved);
+        renderImgFileList();
+      }
+    });
+    list.appendChild(item);
+  });
+  document.getElementById('imgBtn').disabled = state.image2pdf.files.length === 0;
+}
+function removeImgFile(idx) {
+  state.image2pdf.files.splice(idx, 1);
+  renderImgFileList();
+}
+function clearImgFiles() {
+  state.image2pdf.files = [];
+  renderImgFileList();
+}
+async function executeImage2Pdf() {
+  if (state.image2pdf.files.length === 0) return;
+  showLoading('画像をPDFに変換中...');
+  try {
+    const pdfDoc = await PDFDocument.create();
+    const pageSize = document.getElementById('imgPageSize').value;
+    const orientation = document.getElementById('imgOrientation').value;
+    const marginMM = parseInt(document.getElementById('imgMargin').value) || 0;
+    const marginPt = marginMM * 2.835; // mm to points
+    const sizes = {
+      a4: [595.28, 841.89],
+      b5: [498.90, 708.66],
+      letter: [612, 792],
+    };
+    for (const f of state.image2pdf.files) {
+      let img;
+      if (f.type === 'image/png' || f.name.toLowerCase().endsWith('.png')) {
+        img = await pdfDoc.embedPng(f.data);
+      } else {
+        img = await pdfDoc.embedJpg(f.data);
+      }
+      let pageW, pageH;
+      if (pageSize === 'fit') {
+        pageW = img.width + marginPt * 2;
+        pageH = img.height + marginPt * 2;
+      } else {
+        [pageW, pageH] = sizes[pageSize];
+        let useOrientation = orientation;
+        if (useOrientation === 'auto') {
+          useOrientation = img.width > img.height ? 'landscape' : 'portrait';
+        }
+        if (useOrientation === 'landscape') [pageW, pageH] = [pageH, pageW];
+      }
+      const page = pdfDoc.addPage([pageW, pageH]);
+      const availW = pageW - marginPt * 2;
+      const availH = pageH - marginPt * 2;
+      const scale = Math.min(availW / img.width, availH / img.height);
+      const drawW = img.width * scale;
+      const drawH = img.height * scale;
+      const x = marginPt + (availW - drawW) / 2;
+      const y = marginPt + (availH - drawH) / 2;
+      page.drawImage(img, { x, y, width: drawW, height: drawH });
+    }
+    const bytes = await pdfDoc.save();
+    downloadBlob(new Blob([bytes], { type: 'application/pdf' }), '画像変換.pdf');
+    showToast('PDFに変換しました', 'success');
+  } catch (e) {
+    showToast('エラー: ' + e.message, 'error');
+  }
+  hideLoading();
+}
+// ============================================================
+// 4.5 文字入力 (DocuWorks-style inline text editor)
+// ============================================================
+let addtextFontData = null;
+let addtextBlurTimeout = null;
+// フォントデータキャッシュ（フォント名 → ArrayBuffer）
+const fontCache = {};
+const FONT_URLS = {
+  NotoSansJP: 'https://cdn.jsdelivr.net/gh/notofonts/noto-cjk@main/Sans/SubsetOTF/JP/NotoSansJP-Regular.otf',
+  NotoSerifJP: 'https://cdn.jsdelivr.net/gh/notofonts/noto-cjk@main/Serif/SubsetOTF/JP/NotoSerifJP-Regular.otf',
+  ZenMaruGothic: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/zenmarugothic/ZenMaruGothic-Regular.ttf',
+  ZenKakuGothicNew: 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/zenkakugothicnew/ZenKakuGothicNew-Regular.ttf',
+};
+const FONT_CSS_FAMILIES = {
+  NotoSansJP: "'Noto Sans JP', sans-serif",
+  NotoSerifJP: "'Noto Serif JP', serif",
+  ZenMaruGothic: "'Zen Maru Gothic', sans-serif",
+  ZenKakuGothicNew: "'Zen Kaku Gothic New', sans-serif",
+};
+// CSS @font-face をロード
+(function loadGoogleFonts() {
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = 'https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=Noto+Serif+JP:wght@400;700&family=Zen+Maru+Gothic&family=Zen+Kaku+Gothic+New&display=swap';
+  document.head.appendChild(link);
+})();
+async function loadFontData(fontName) {
+  if (fontCache[fontName]) return fontCache[fontName];
+  const url = FONT_URLS[fontName];
+  if (!url) return null;
+  const resp = await fetch(url);
+  if (!resp.ok) return null;
+  fontCache[fontName] = await resp.arrayBuffer();
+  // NotoSansJPは従来のaddtextFontDataとしてもキャッシュ
+  if (fontName === 'NotoSansJP') addtextFontData = fontCache[fontName];
+  return fontCache[fontName];
+}
+setupDropZone('addtextDropZone', 'addtextFileInput', async (files) => {
+  const f = files.find(f => f.name.toLowerCase().endsWith('.pdf'));
+  if (!f) { showToast('PDFファイルを選択してください', 'error'); return; }
+  showLoading('PDFを読み込み中...');
+  try {
+    const buf = await readFileAsArrayBuffer(f);
+    state.addtext.originalBytes = buf.slice(0); // 保存用の原本コピー（絶対に変更しない）
+    state.addtext.file = { name: f.name };
+    state.addtext.pdfBytes = new Uint8Array(buf);
+    const doc = await loadPdf(buf);
+    state.addtext.pageCount = doc.getPageCount();
+    state.addtext.currentPage = 1;
+    state.addtext.entries = [];
+    state.addtext.stickies = [];
+    state.addtext.markers = [];
+    state.addtext.activeInput = null;
+    document.getElementById('addtextDropCard').style.display = 'none';
+    document.getElementById('addtextEditor').style.display = '';
+    await renderAddtextPage();
+    updateAddtextEntryList();
+  } catch (e) {
+    showToast('エラー: ' + e.message, 'error');
+  }
+  hideLoading();
+});
+function resetAddtext() {
+  commitActiveInput();
+  state.addtext = { file: null, originalBytes: null, pdfBytes: null, pageCount: 0, currentPage: 1, scale: 1, zoomLevel: 0, panX: 0, panY: 0, pageWidth: 0, pageHeight: 0, entries: [], stickies: [], markers: [], activeInput: null, tool: 'text' };
+  document.getElementById('addtextDropCard').style.display = '';
+  document.getElementById('addtextEditor').style.display = 'none';
+  const inner = document.getElementById('addtextCanvasInner');
+  inner.querySelectorAll('.text-overlay, .inline-text-input, .sticky-rect, .marker-line').forEach(el => el.remove());
+  setAddtextTool('text');
+}
+async function renderAddtextPage() {
+  commitActiveInput();
+  const inner = document.getElementById('addtextCanvasInner');
+  const canvas = document.getElementById('addtextCanvas');
+  inner.querySelectorAll('.text-overlay, .inline-text-input, .sticky-rect, .marker-line').forEach(el => el.remove());
+  const loadingTask = pdfjsLib.getDocument({ data: state.addtext.pdfBytes.slice(), cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/', cMapPacked: true });
+  const pdf = await loadingTask.promise;
+  const page = await pdf.getPage(state.addtext.currentPage);
+  const vp = page.getViewport({ scale: 1 });
+  state.addtext.pageWidth = vp.width;
+  state.addtext.pageHeight = vp.height;
+  // 高解像度レンダリング（常にscale=2でレンダリングし、CSSで表示サイズを制御）
+  const renderScale = 2;
+  const viewport = page.getViewport({ scale: renderScale });
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+  canvas.style.width = vp.width + 'px';
+  canvas.style.height = vp.height + 'px';
+  const ctx = canvas.getContext('2d');
+  await page.render({ canvasContext: ctx, viewport }).promise;
+  pdf.destroy();
+  // inner はPDFの実寸サイズ (1:1pt)
+  inner.style.width = vp.width + 'px';
+  inner.style.height = vp.height + 'px';
+  applyAddtextTransform();
+  document.getElementById('addtextPageInfo').textContent =
+    `${state.addtext.currentPage} / ${state.addtext.pageCount}`;
+  renderAddtextOverlays();
+}
+function applyAddtextTransform() {
+  const inner = document.getElementById('addtextCanvasInner');
+  const container = document.getElementById('addtextCanvasContainer');
+  const s = state.addtext;
+  const fitScale = Math.min(container.clientWidth / s.pageWidth, container.clientHeight / s.pageHeight, 2);
+  const zoomSteps = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 2.5, 3.0, 4.0];
+  let scale;
+  if (s.zoomLevel === 0) {
+    scale = fitScale;
+  } else {
+    let baseIdx = zoomSteps.findIndex(v => v >= fitScale);
+    if (baseIdx < 0) baseIdx = zoomSteps.length - 1;
+    const idx = Math.max(0, Math.min(zoomSteps.length - 1, baseIdx + s.zoomLevel));
+    scale = zoomSteps[idx];
+  }
+  s.scale = scale;
+  // ズームレベル0（FIT）時はセンタリング
+  let px = s.panX, py = s.panY;
+  if (s.zoomLevel === 0 && s.panX === 0 && s.panY === 0) {
+    const cw = container.clientWidth, ch = container.clientHeight;
+    const sw = s.pageWidth * scale, sh = s.pageHeight * scale;
+    if (sw < cw) px = (cw - sw) / 2;
+    if (sh < ch) py = (ch - sh) / 2;
+  }
+  inner.style.transform = `translate(${px}px, ${py}px) scale(${scale})`;
+  document.getElementById('addtextZoomInfo').textContent = Math.round(scale * 100) + '%';
+}
+function renderAddtextOverlays() {
+  const inner = document.getElementById('addtextCanvasInner');
+  inner.querySelectorAll('.text-overlay, .sticky-rect, .marker-line').forEach(el => el.remove());
+  state.addtext.markers.forEach((marker, idx) => {
+    if (marker.page !== state.addtext.currentPage) return;
+    createMarkerDiv(marker, idx);
+  });
+  state.addtext.stickies.forEach((sticky, idx) => {
+    if (sticky.page !== state.addtext.currentPage) return;
+    createStickyDiv(sticky, idx);
+  });
+  state.addtext.entries.forEach((entry, idx) => {
+    if (entry.page !== state.addtext.currentPage) return;
+    createOverlayDiv(entry, idx);
+  });
+}
+function createMarkerDiv(marker, idx) {
+  const inner = document.getElementById('addtextCanvasInner');
+  const scale = state.addtext.scale;
+  const x1 = Math.min(marker.x1, marker.x2);
+  const x2 = Math.max(marker.x1, marker.x2);
+  const y = marker.y1;
+  const w = x2 - x1;
+  const t = marker.thickness;
+  const div = document.createElement('div');
+  div.className = 'marker-line';
+  div.style.left = x1 + 'px';
+  div.style.top = (y - t / 2) + 'px';
+  div.style.width = w + 'px';
+  div.style.height = t + 'px';
+  div.style.background = marker.color;
+  div.style.opacity = '0.45';
+  div.style.borderRadius = (t / 2) + 'px';
+  const del = document.createElement('div');
+  del.className = 'delete-handle';
+  del.textContent = '✕';
+  del.addEventListener('mousedown', (e) => {
+    e.stopPropagation(); e.preventDefault();
+    state.addtext.markers.splice(idx, 1);
+    renderAddtextOverlays();
+    updateAddtextEntryList();
+  });
+  div.appendChild(del);
+  // Drag to move
+  div.addEventListener('mousedown', (e) => {
+    if (e.target === del) return;
+    e.preventDefault(); e.stopPropagation();
+    const startX = e.clientX, startY = e.clientY;
+    const origX1 = marker.x1, origX2 = marker.x2, origY = marker.y1;
+    function onMove(me) {
+      const dx = (me.clientX - startX) / scale;
+      const dy = (me.clientY - startY) / scale;
+      marker.x1 = origX1 + dx;
+      marker.x2 = origX2 + dx;
+      marker.y1 = origY + dy;
+      marker.y2 = origY + dy;
+      const nx = Math.min(marker.x1, marker.x2);
+      div.style.left = nx + 'px';
+      div.style.top = (marker.y1 - t / 2) + 'px';
+    }
+    function onUp() {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+  inner.appendChild(div);
+}
+function createOverlayDiv(entry, idx) {
+  const inner = document.getElementById('addtextCanvasInner');
+  const scale = state.addtext.scale;
+  const div = document.createElement('div');
+  div.className = 'text-overlay';
+  div.style.left = entry.topX + 'px';
+  div.style.top = entry.topY + 'px';
+  div.style.fontSize = entry.fontSize + 'px';
+  div.style.color = entry.color;
+  div.style.fontFamily = FONT_CSS_FAMILIES[entry.fontFamily] || FONT_CSS_FAMILIES['NotoSansJP'];
+  div.textContent = entry.text;
+  div.dataset.entryIndex = idx;
+  // Delete button
+  const del = document.createElement('div');
+  del.className = 'delete-handle';
+  del.textContent = '✕';
+  del.addEventListener('mousedown', (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    state.addtext.entries.splice(idx, 1);
+    renderAddtextOverlays();
+    updateAddtextEntryList();
+  });
+  div.appendChild(del);
+  // Double-click to re-edit
+  div.addEventListener('dblclick', (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    document.getElementById('addtextFontSize').value = entry.fontSize;
+    document.getElementById('addtextColor').value = entry.color;
+    document.getElementById('addtextFontFamily').value = entry.fontFamily || 'NotoSansJP';
+    state.addtext.entries.splice(idx, 1);
+    renderAddtextOverlays();
+    updateAddtextEntryList();
+    createInlineInput(entry.topX, entry.topY, entry.text);
+  });
+  // Drag
+  div.addEventListener('mousedown', (e) => {
+    if (e.target === del) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const origLeft = parseFloat(div.style.left);
+    const origTop = parseFloat(div.style.top);
+    let moved = false;
+    function onMove(me) {
+      moved = true;
+      const dx = (me.clientX - startX) / scale;
+      const dy = (me.clientY - startY) / scale;
+      div.style.left = (origLeft + dx) + 'px';
+      div.style.top = (origTop + dy) + 'px';
+    }
+    function onUp() {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      if (moved) {
+        entry.topX = parseFloat(div.style.left);
+        entry.topY = parseFloat(div.style.top);
+      }
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+  inner.appendChild(div);
+}
+// 付箋 (sticky rect)
+function createStickyDiv(sticky, idx) {
+  const inner = document.getElementById('addtextCanvasInner');
+  const scale = state.addtext.scale;
+  const div = document.createElement('div');
+  div.className = 'sticky-rect';
+  div.style.left = sticky.x + 'px';
+  div.style.top = sticky.y + 'px';
+  div.style.width = sticky.w + 'px';
+  div.style.height = sticky.h + 'px';
+  div.style.background = sticky.color;
+  const del = document.createElement('div');
+  del.className = 'delete-handle';
+  del.textContent = '✕';
+  del.addEventListener('mousedown', (e) => {
+    e.stopPropagation(); e.preventDefault();
+    state.addtext.stickies.splice(idx, 1);
+    renderAddtextOverlays();
+    updateAddtextEntryList();
+  });
+  div.appendChild(del);
+  const resize = document.createElement('div');
+  resize.className = 'resize-handle';
+  resize.addEventListener('mousedown', (e) => {
+    e.stopPropagation(); e.preventDefault();
+    const startX = e.clientX, startY = e.clientY;
+    const origW = sticky.w, origH = sticky.h;
+    function onMove(me) {
+      sticky.w = Math.max(10, origW + (me.clientX - startX) / scale);
+      sticky.h = Math.max(10, origH + (me.clientY - startY) / scale);
+      div.style.width = sticky.w + 'px';
+      div.style.height = sticky.h + 'px';
+    }
+    function onUp() {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+  div.appendChild(resize);
+  // Drag
+  div.addEventListener('mousedown', (e) => {
+    if (e.target === del || e.target === resize) return;
+    e.preventDefault(); e.stopPropagation();
+    const startX = e.clientX, startY = e.clientY;
+    const origLeft = sticky.x, origTop = sticky.y;
+    let moved = false;
+    function onMove(me) {
+      moved = true;
+      sticky.x = origLeft + (me.clientX - startX) / scale;
+      sticky.y = origTop + (me.clientY - startY) / scale;
+      div.style.left = sticky.x + 'px';
+      div.style.top = sticky.y + 'px';
+    }
+    function onUp() {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+  inner.appendChild(div);
+}
+// Inline text input (DocuWorks-like)
+function createInlineInput(pdfX, pdfY, initialText) {
+  const inner = document.getElementById('addtextCanvasInner');
+  const fontSize = parseInt(document.getElementById('addtextFontSize').value) || 12;
+  const color = document.getElementById('addtextColor').value;
+  const fontFamily = document.getElementById('addtextFontFamily').value;
+  const textarea = document.createElement('textarea');
+  textarea.className = 'inline-text-input';
+  textarea.style.left = pdfX + 'px';
+  textarea.style.top = pdfY + 'px';
+  textarea.style.fontSize = fontSize + 'px';
+  textarea.style.color = color;
+  textarea.style.fontFamily = FONT_CSS_FAMILIES[fontFamily] || 'sans-serif';
+  if (initialText) textarea.value = initialText;
+  inner.appendChild(textarea);
+  state.addtext.activeInput = textarea;
+  state.addtext.activeInputPos = { pdfX, pdfY };
+  setTimeout(() => {
+    textarea.focus();
+    if (initialText) {
+      textarea.style.height = 'auto';
+      textarea.style.height = textarea.scrollHeight + 'px';
+    }
+  }, 10);
+  textarea.addEventListener('input', () => {
+    textarea.style.height = 'auto';
+    textarea.style.height = textarea.scrollHeight + 'px';
+  });
+  textarea.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.ctrlKey) {
+      e.preventDefault();
+      commitActiveInput();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      cancelActiveInput();
+    }
+  });
+  textarea.addEventListener('blur', () => {
+    addtextBlurTimeout = setTimeout(() => {
+      if (state.addtext.activeInput === textarea) {
+        commitActiveInput();
+      }
+    }, 200);
+  });
+}
+function commitActiveInput() {
+  clearTimeout(addtextBlurTimeout);
+  const textarea = state.addtext.activeInput;
+  if (!textarea) return;
+  const text = textarea.value.trim();
+  const pos = state.addtext.activeInputPos;
+  state.addtext.activeInput = null;
+  state.addtext.activeInputPos = null;
+  textarea.remove();
+  if (text) {
+    state.addtext.entries.push({
+      page: state.addtext.currentPage,
+      topX: pos.pdfX,
+      topY: pos.pdfY,
+      text: text,
+      fontSize: parseInt(document.getElementById('addtextFontSize').value) || 12,
+      color: document.getElementById('addtextColor').value,
+      fontFamily: document.getElementById('addtextFontFamily').value,
+    });
+    renderAddtextOverlays();
+    updateAddtextEntryList();
+  }
+}
+function cancelActiveInput() {
+  clearTimeout(addtextBlurTimeout);
+  const textarea = state.addtext.activeInput;
+  if (!textarea) return;
+  state.addtext.activeInput = null;
+  state.addtext.activeInputPos = null;
+  textarea.remove();
+}
+// ツールモード切替
+function setAddtextTool(tool) {
+  state.addtext.tool = tool;
+  const container = document.getElementById('addtextCanvasContainer');
+  container.classList.toggle('panning', tool === 'hand');
+  const cursors = { hand: 'grab', sticky: 'crosshair', marker: 'crosshair', text: 'crosshair' };
+  container.style.cursor = cursors[tool] || 'crosshair';
+  ['toolText', 'toolMarker', 'toolSticky', 'toolHand'].forEach(id => {
+    const el = document.getElementById(id);
+    const match = id === 'tool' + tool.charAt(0).toUpperCase() + tool.slice(1);
+    el.style.background = match ? 'var(--primary)' : '';
+    el.style.color = match ? '#fff' : '';
+  });
+  document.getElementById('markerSettings').style.display = tool === 'marker' ? '' : 'none';
+  document.getElementById('stickySettings').style.display = tool === 'sticky' ? '' : 'none';
+}
+// マーカー色選択
+document.querySelectorAll('.marker-color').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.marker-color').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+// 付箋色選択
+document.querySelectorAll('.sticky-color').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.sticky-color').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('stickyColor').value = btn.dataset.scolor;
+  });
+});
+document.getElementById('stickyColor').addEventListener('input', (e) => {
+  document.querySelectorAll('.sticky-color').forEach(b => b.classList.remove('active'));
+});
+// クリック座標からPDF座標へ変換
+function clientToPdfCoords(e) {
+  const inner = document.getElementById('addtextCanvasInner');
+  const rect = inner.getBoundingClientRect();
+  const scale = state.addtext.scale;
+  return {
+    x: (e.clientX - rect.left) / scale,
+    y: (e.clientY - rect.top) / scale
+  };
+}
+// Canvas interaction handling
+(function() {
+  const container = document.getElementById('addtextCanvasContainer');
+  let isPanning = false, stickyDraw = null;
+  container.addEventListener('mousedown', (e) => {
+    if (e.target.closest('.text-overlay') || e.target.closest('.inline-text-input') ||
+        e.target.closest('.sticky-rect') || e.target.closest('.marker-line')) return;
+    if (!state.addtext.pdfBytes) return;
+    const tool = state.addtext.tool;
+    if (tool === 'text') {
+      clearTimeout(addtextBlurTimeout);
+      commitActiveInput();
+      return;
+    }
+    if (tool === 'hand') {
+      isPanning = true;
+      const startX = e.clientX, startY = e.clientY;
+      const origPanX = state.addtext.panX, origPanY = state.addtext.panY;
+      function onMove(me) {
+        state.addtext.panX = origPanX + (me.clientX - startX);
+        state.addtext.panY = origPanY + (me.clientY - startY);
+        applyAddtextTransform();
+      }
+      function onUp() {
+        isPanning = false;
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+      }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+      e.preventDefault();
+      return;
+    }
+    if (tool === 'marker') {
+      const pos = clientToPdfCoords(e);
+      const thickness = parseInt(document.getElementById('markerThickness').value) || 12;
+      const activeColor = document.querySelector('.marker-color.active');
+      const color = activeColor ? activeColor.dataset.mcolor : '#ffff00';
+      const inner = document.getElementById('addtextCanvasInner');
+      const preview = document.createElement('div');
+      preview.className = 'marker-line';
+      preview.style.left = pos.x + 'px';
+      preview.style.top = (pos.y - thickness / 2) + 'px';
+      preview.style.width = '0px';
+      preview.style.height = thickness + 'px';
+      preview.style.background = color;
+      preview.style.opacity = '0.45';
+      preview.style.borderRadius = (thickness / 2) + 'px';
+      inner.appendChild(preview);
+      function onMove(me) {
+        const cur = clientToPdfCoords(me);
+        const x1 = Math.min(pos.x, cur.x);
+        const w = Math.abs(cur.x - pos.x);
+        preview.style.left = x1 + 'px';
+        preview.style.width = w + 'px';
+      }
+      function onUp(me) {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        preview.remove();
+        const cur = clientToPdfCoords(me);
+        const len = Math.abs(cur.x - pos.x);
+        if (len < 5) return;
+        state.addtext.markers.push({
+          page: state.addtext.currentPage,
+          x1: pos.x, y1: pos.y,
+          x2: cur.x, y2: pos.y,
+          color, thickness
+        });
+        renderAddtextOverlays();
+        updateAddtextEntryList();
+      }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+      e.preventDefault();
+      return;
+    }
+    if (tool === 'sticky') {
+      const pos = clientToPdfCoords(e);
+      stickyDraw = { startX: pos.x, startY: pos.y };
+      // 一時的にプレビュー用の要素を作成
+      const inner = document.getElementById('addtextCanvasInner');
+      const preview = document.createElement('div');
+      preview.className = 'sticky-rect';
+      preview.id = 'stickyPreview';
+      preview.style.left = pos.x + 'px';
+      preview.style.top = pos.y + 'px';
+      preview.style.width = '0px';
+      preview.style.height = '0px';
+      preview.style.background = document.getElementById('stickyColor').value;
+      preview.style.opacity = '0.7';
+      inner.appendChild(preview);
+      function onMove(me) {
+        if (!stickyDraw) return;
+        const cur = clientToPdfCoords(me);
+        const x = Math.min(stickyDraw.startX, cur.x);
+        const y = Math.min(stickyDraw.startY, cur.y);
+        const w = Math.abs(cur.x - stickyDraw.startX);
+        const h = Math.abs(cur.y - stickyDraw.startY);
+        preview.style.left = x + 'px';
+        preview.style.top = y + 'px';
+        preview.style.width = w + 'px';
+        preview.style.height = h + 'px';
+      }
+      function onUp(me) {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        preview.remove();
+        if (!stickyDraw) return;
+        const cur = clientToPdfCoords(me);
+        const x = Math.min(stickyDraw.startX, cur.x);
+        const y = Math.min(stickyDraw.startY, cur.y);
+        const w = Math.abs(cur.x - stickyDraw.startX);
+        const h = Math.abs(cur.y - stickyDraw.startY);
+        stickyDraw = null;
+        if (w < 5 || h < 5) return;
+        state.addtext.stickies.push({
+          page: state.addtext.currentPage,
+          x, y, w, h,
+          color: document.getElementById('stickyColor').value
+        });
+        renderAddtextOverlays();
+        updateAddtextEntryList();
+      }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+      e.preventDefault();
+      return;
+    }
+  });
+  container.addEventListener('click', (e) => {
+    if (e.target.closest('.text-overlay') || e.target.closest('.inline-text-input') ||
+        e.target.closest('.sticky-rect') || e.target.closest('.marker-line')) return;
+    if (state.addtext.tool !== 'text') return;
+    if (state.addtext.activeInput) return;
+    if (!state.addtext.pdfBytes) return;
+    const pos = clientToPdfCoords(e);
+    createInlineInput(pos.x, pos.y);
+  });
+  // マウスホイールでズーム
+  container.addEventListener('wheel', (e) => {
+    if (!state.addtext.pdfBytes) return;
+    e.preventDefault();
+    const dir = e.deltaY < 0 ? 1 : -1;
+    addtextZoom(dir);
+  }, { passive: false });
+})();
+function updateAddtextEntryList() {
+  const list = document.getElementById('addtextEntryList');
+  const entries = state.addtext.entries;
+  const stickies = state.addtext.stickies;
+  const markers = state.addtext.markers;
+  const total = entries.length + stickies.length + markers.length;
+  document.getElementById('addtextCount').textContent = `(${total}件)`;
+  if (total === 0) {
+    list.innerHTML = '<p style="font-size:13px;color:var(--text-sub);">まだ配置されていません</p>';
+    return;
+  }
+  list.innerHTML = '';
+  // テキスト
+  entries.forEach((entry, idx) => {
+    const item = document.createElement('div');
+    item.className = 'text-entry-item';
+    const preview = entry.text.length > 20 ? entry.text.substring(0, 20) + '...' : entry.text;
+    item.innerHTML = `
+      <span class="entry-text">✏️ P${entry.page}: ${preview}</span>
+      <span class="entry-delete" data-type="text" data-idx="${idx}">✕</span>
+    `;
+    item.addEventListener('click', (e) => {
+      if (e.target.classList.contains('entry-delete')) {
+        state.addtext.entries.splice(parseInt(e.target.dataset.idx), 1);
+        renderAddtextOverlays();
+        updateAddtextEntryList();
+        return;
+      }
+      if (entry.page !== state.addtext.currentPage) {
+        state.addtext.currentPage = entry.page;
+        renderAddtextPage();
+      }
+    });
+    list.appendChild(item);
+  });
+  // 付箋
+  stickies.forEach((sticky, idx) => {
+    const item = document.createElement('div');
+    item.className = 'text-entry-item';
+    item.innerHTML = `
+      <span class="entry-text">
+        <span style="display:inline-block;width:12px;height:12px;background:${sticky.color};border:1px solid #ccc;border-radius:2px;vertical-align:middle;margin-right:4px;"></span>
+        P${sticky.page}: 付箋 ${Math.round(sticky.w)}×${Math.round(sticky.h)}
+      </span>
+      <span class="entry-delete" data-type="sticky" data-idx="${idx}">✕</span>
+    `;
+    item.addEventListener('click', (e) => {
+      if (e.target.classList.contains('entry-delete')) {
+        state.addtext.stickies.splice(parseInt(e.target.dataset.idx), 1);
+        renderAddtextOverlays();
+        updateAddtextEntryList();
+        return;
+      }
+      if (sticky.page !== state.addtext.currentPage) {
+        state.addtext.currentPage = sticky.page;
+        renderAddtextPage();
+      }
+    });
+    list.appendChild(item);
+  });
+  // マーカー
+  markers.forEach((marker, idx) => {
+    const item = document.createElement('div');
+    item.className = 'text-entry-item';
+    const len = Math.round(Math.abs(marker.x2 - marker.x1));
+    item.innerHTML = `
+      <span class="entry-text">
+        <span style="display:inline-block;width:20px;height:${Math.min(marker.thickness, 10)}px;background:${marker.color};opacity:0.6;border-radius:2px;vertical-align:middle;margin-right:4px;"></span>
+        P${marker.page}: マーカー ${len}pt
+      </span>
+      <span class="entry-delete" data-type="marker" data-idx="${idx}">✕</span>
+    `;
+    item.addEventListener('click', (e) => {
+      if (e.target.classList.contains('entry-delete')) {
+        state.addtext.markers.splice(parseInt(e.target.dataset.idx), 1);
+        renderAddtextOverlays();
+        updateAddtextEntryList();
+        return;
+      }
+      if (marker.page !== state.addtext.currentPage) {
+        state.addtext.currentPage = marker.page;
+        renderAddtextPage();
+      }
+    });
+    list.appendChild(item);
+  });
+}
+function addtextPrevPage() {
+  if (state.addtext.currentPage > 1) {
+    state.addtext.currentPage--;
+    state.addtext.panX = 0; state.addtext.panY = 0;
+    renderAddtextPage();
+  }
+}
+function addtextNextPage() {
+  if (state.addtext.currentPage < state.addtext.pageCount) {
+    state.addtext.currentPage++;
+    state.addtext.panX = 0; state.addtext.panY = 0;
+    renderAddtextPage();
+  }
+}
+function addtextZoom(dir) {
+  if (dir === 0) {
+    state.addtext.zoomLevel = 0;
+    state.addtext.panX = 0; state.addtext.panY = 0;
+  } else {
+    const oldLevel = state.addtext.zoomLevel;
+    state.addtext.zoomLevel = Math.max(-4, Math.min(6, state.addtext.zoomLevel + dir));
+    if (state.addtext.zoomLevel === oldLevel) return;
+  }
+  applyAddtextTransform();
+}
+// テキストエントリをCanvas経由でPNG画像に変換（フォント埋め込み不要）
+async function _renderTextToPng(entry) {
+  const pxScale = 3; // 高解像度レンダリング（3倍）
+  const padding = 2;
+  const lines = String(entry.text || '').split('\n');
+  const fontFamily = FONT_CSS_FAMILIES[entry.fontFamily] || FONT_CSS_FAMILIES.NotoSansJP || 'sans-serif';
+  const fontSpec = `${entry.fontSize}px ${fontFamily}`;
+  const lineHeight = entry.fontSize * 1.4;
+  // テキスト幅を計測
+  const measureCanvas = document.createElement('canvas');
+  const measureCtx = measureCanvas.getContext('2d');
+  measureCtx.font = fontSpec;
+  let maxWidth = 1;
+  for (const line of lines) {
+    const w = Math.ceil(measureCtx.measureText(line || ' ').width);
+    if (w > maxWidth) maxWidth = w;
+  }
+  const widthPt = maxWidth + padding * 2;
+  const heightPt = Math.max(entry.fontSize, lines.length * lineHeight) + padding * 2;
+  // 高解像度Canvasに描画
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.ceil(widthPt * pxScale));
+  canvas.height = Math.max(1, Math.ceil(heightPt * pxScale));
+  const ctx = canvas.getContext('2d');
+  ctx.scale(pxScale, pxScale);
+  ctx.clearRect(0, 0, widthPt, heightPt);
+  ctx.font = fontSpec;
+  ctx.textBaseline = 'top';
+  ctx.textAlign = 'left';
+  ctx.fillStyle = entry.color || '#000000';
+  lines.forEach((line, i) => {
+    if (!line) return;
+    ctx.fillText(line, padding, padding + i * lineHeight);
+  });
+  const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  return { bytes, widthPt, heightPt };
+}
+async function saveAddtextPdf() {
+  commitActiveInput();
+  if (state.addtext.entries.length === 0 && state.addtext.stickies.length === 0 && state.addtext.markers.length === 0) {
+    showToast('テキスト・付箋・マーカーが配置されていません', 'error');
+    return;
+  }
+  showLoading('PDFにテキストを書き込み中...');
+  try {
+    showLoading('pdf-libで保存中...');
+    const srcDoc = await loadPdf(state.addtext.originalBytes || state.addtext.pdfBytes);
+    const newDoc = await PDFDocument.create();
+    const copiedPages = await newDoc.copyPages(srcDoc, srcDoc.getPageIndices());
+    copiedPages.forEach(p => newDoc.addPage(p));
+    // テキストはPNG画像として焼き込み（フォント埋め込みを避けて軽量化）
+    // Google Fontsの読み込みを確実に待つ
+    await document.fonts.ready;
+    const entriesByPage = {};
+    for (const entry of state.addtext.entries) {
+      if (!entriesByPage[entry.page]) entriesByPage[entry.page] = [];
+      entriesByPage[entry.page].push(entry);
+    }
+    showLoading('テキストを書き込み中...');
+    let hasError = false;
+    const newPages = newDoc.getPages();
+    // マーカーを描画
+    for (const marker of state.addtext.markers) {
+      const targetPage = newPages[marker.page - 1];
+      if (!targetPage) continue;
+      const { height: pageH } = targetPage.getSize();
+      const hex = marker.color.replace('#', '');
+      const r = parseInt(hex.substr(0, 2), 16) / 255;
+      const g = parseInt(hex.substr(2, 2), 16) / 255;
+      const b = parseInt(hex.substr(4, 2), 16) / 255;
+      const x1 = Math.min(marker.x1, marker.x2);
+      const w = Math.abs(marker.x2 - marker.x1);
+      const pdfY = pageH - marker.y1;
+      targetPage.drawRectangle({
+        x: x1,
+        y: pdfY - marker.thickness / 2,
+        width: w,
+        height: marker.thickness,
+        color: rgb(r, g, b),
+        opacity: 0.45,
+        borderWidth: 0,
+      });
+    }
+    // 付箋（矩形）を描画
+    for (const sticky of state.addtext.stickies) {
+      const targetPage = newPages[sticky.page - 1];
+      if (!targetPage) continue;
+      const { height: pageH } = targetPage.getSize();
+      const hex = sticky.color.replace('#', '');
+      const r = parseInt(hex.substr(0, 2), 16) / 255;
+      const g = parseInt(hex.substr(2, 2), 16) / 255;
+      const b = parseInt(hex.substr(4, 2), 16) / 255;
+      targetPage.drawRectangle({
+        x: sticky.x,
+        y: pageH - sticky.y - sticky.h,
+        width: sticky.w,
+        height: sticky.h,
+        color: rgb(r, g, b),
+        borderWidth: 0,
+      });
+    }
+    // テキストをPNG画像として描画（フォント埋め込み不要）
+    for (const [pageNumStr, entries] of Object.entries(entriesByPage)) {
+      const pageNum = parseInt(pageNumStr);
+      const targetPage = newPages[pageNum - 1];
+      if (!targetPage) continue;
+      const { height: pageH } = targetPage.getSize();
+      for (const entry of entries) {
+        try {
+          const rendered = await _renderTextToPng(entry);
+          const pngImage = await newDoc.embedPng(rendered.bytes);
+          targetPage.drawImage(pngImage, {
+            x: entry.topX,
+            y: pageH - entry.topY - rendered.heightPt,
+            width: rendered.widthPt,
+            height: rendered.heightPt,
+          });
+        } catch (err) {
+          console.warn('Text rasterize failed:', err);
+          if (!hasError) {
+            hasError = true;
+            showToast('文字画像の作成に失敗した箇所があります。', 'error');
+          }
+        }
+      }
+    }
+    const bytes = await newDoc.save();
+    const baseName = state.addtext.file.name.replace(/\.pdf$/i, '');
+    downloadBlob(new Blob([bytes], { type: 'application/pdf' }), `${baseName}_文字入力済み.pdf`);
+    showToast('保存しました（pdf-lib）', 'success');
+  } catch (e) {
+    showToast('エラー: ' + e.message, 'error');
+  }
+  hideLoading();
+}
+// ============================================================
+// 5. 透かし追加
+// ============================================================
+setupDropZone('wmDropZone', 'wmFileInput', async (files) => {
+  const f = files.find(f => f.name.toLowerCase().endsWith('.pdf'));
+  if (!f) { showToast('PDFファイルを選択してください', 'error'); return; }
+  const buf = await readFileAsArrayBuffer(f);
+  state.watermark.file = { name: f.name, data: buf };
+  const doc = await loadPdf(buf);
+  document.getElementById('wmFileInfo').textContent = `${f.name} (${doc.getPageCount()}ページ)`;
+  document.getElementById('wmBtn').disabled = false;
+});
+function updateWmPreview() {
+  const text = document.getElementById('wmText').value || '透かし';
+  const fontSize = parseInt(document.getElementById('wmFontSize').value) || 60;
+  const color = document.getElementById('wmColor').value;
+  const opacity = parseInt(document.getElementById('wmOpacity').value) || 20;
+  const wmAngleRaw = document.getElementById('wmAngle').value;
+  const angle = wmAngleRaw === '' || isNaN(parseInt(wmAngleRaw)) ? -45 : parseInt(wmAngleRaw);
+  const colors = { red: 'rgba(200,0,0,', gray: 'rgba(128,128,128,', blue: 'rgba(0,0,200,', black: 'rgba(0,0,0,' };
+  const el = document.getElementById('wmPreviewText');
+  el.textContent = text;
+  el.style.fontSize = Math.min(fontSize / 2, 40) + 'px';
+  el.style.color = colors[color] + (opacity / 100) + ')';
+  el.style.transform = `rotate(${angle}deg)`;
+}
+async function executeWatermark() {
+  if (!state.watermark.file) return;
+  showLoading('透かしを追加中...');
+  try {
+    const pdfDoc = await loadPdf(state.watermark.file.data);
+    const text = document.getElementById('wmText').value || '透かし';
+    const fontSize = parseInt(document.getElementById('wmFontSize').value) || 60;
+    const colorName = document.getElementById('wmColor').value;
+    const opacity = (parseInt(document.getElementById('wmOpacity').value) || 20) / 100;
+    const wmAngleRaw2 = document.getElementById('wmAngle').value;
+    const angle = wmAngleRaw2 === '' || isNaN(parseInt(wmAngleRaw2)) ? -45 : parseInt(wmAngleRaw2);
+    // Canvas APIでPNG画像として透かしを生成（フォント埋め込み不要）
+    const colorRgbaMap = {
+      red:   `rgba(204, 0, 0, ${opacity})`,
+      gray:  `rgba(128, 128, 128, ${opacity})`,
+      blue:  `rgba(0, 0, 204, ${opacity})`,
+      black: `rgba(0, 0, 0, ${opacity})`,
+    };
+    await document.fonts.ready;
+    showLoading('透かし画像を生成中...');
+    // テキストサイズを計測
+    const measureCanvas = document.createElement('canvas');
+    const measureCtx = measureCanvas.getContext('2d');
+    measureCtx.font = `${fontSize}px 'Noto Sans JP', sans-serif`;
+    const textWidth = measureCtx.measureText(text).width;
+    const textHeight = fontSize;
+    // 回転後のバウンディングボックスを計算
+    const rad = angle * Math.PI / 180;
+    const bboxW = Math.abs(textWidth * Math.cos(rad)) + Math.abs(textHeight * Math.sin(rad));
+    const bboxH = Math.abs(textWidth * Math.sin(rad)) + Math.abs(textHeight * Math.cos(rad));
+    // 高解像度Canvasに回転済みテキストを描画
+    const pxScale = 2;
+    const wmCanvas = document.createElement('canvas');
+    wmCanvas.width = Math.ceil(bboxW * pxScale) + 4;
+    wmCanvas.height = Math.ceil(bboxH * pxScale) + 4;
+    const ctx = wmCanvas.getContext('2d');
+    ctx.scale(pxScale, pxScale);
+    ctx.clearRect(0, 0, bboxW + 4, bboxH + 4);
+    ctx.save();
+    ctx.translate(bboxW / 2 + 2, bboxH / 2 + 2);
+    ctx.rotate(rad);
+    ctx.font = `${fontSize}px 'Noto Sans JP', sans-serif`;
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = colorRgbaMap[colorName] || colorRgbaMap.red;
+    ctx.fillText(text, 0, 0);
+    ctx.restore();
+    // PNGに変換してpdf-libに埋め込み
+    const wmBlob = await new Promise(r => wmCanvas.toBlob(r, 'image/png'));
+    const wmPngBytes = new Uint8Array(await wmBlob.arrayBuffer());
+    const wmPngImage = await pdfDoc.embedPng(wmPngBytes);
+    showLoading('全ページに透かしを追加中...');
+    const pages = pdfDoc.getPages();
+    for (const page of pages) {
+      const { width, height } = page.getSize();
+      page.drawImage(wmPngImage, {
+        x: (width - bboxW) / 2,
+        y: (height - bboxH) / 2,
+        width: bboxW,
+        height: bboxH,
+      });
+    }
+    const bytes = await pdfDoc.save();
+    const baseName = state.watermark.file.name.replace(/\.pdf$/i, '');
+    downloadBlob(new Blob([bytes], { type: 'application/pdf' }), `${baseName}_透かし付き.pdf`);
+    showToast(`透かしを追加しました（全${pages.length}ページ）`, 'success');
+  } catch (e) {
+    showToast('エラー: ' + e.message, 'error');
+  }
+  hideLoading();
+}
+// ============================================================
+// 7. PDF情報
+// ============================================================
+setupDropZone('infoDropZone', 'infoFileInput', async (files) => {
+  const f = files.find(f => f.name.toLowerCase().endsWith('.pdf'));
+  if (!f) { showToast('PDFファイルを選択してください', 'error'); return; }
+  try {
+    const buf = await readFileAsArrayBuffer(f);
+    const doc = await loadPdf(buf);
+    const pages = doc.getPages();
+    const firstPage = pages[0];
+    const { width, height } = firstPage.getSize();
+    const widthMM = (width / 72 * 25.4).toFixed(1);
+    const heightMM = (height / 72 * 25.4).toFixed(1);
+    const info = [
+      ['ファイル名', f.name],
+      ['ファイルサイズ', formatSize(f.size)],
+      ['ページ数', doc.getPageCount()],
+      ['ページサイズ', `${widthMM} x ${heightMM} mm (${width.toFixed(0)} x ${height.toFixed(0)} pt)`],
+      ['タイトル', doc.getTitle() || '(なし)'],
+      ['作成者', doc.getAuthor() || '(なし)'],
+      ['件名', doc.getSubject() || '(なし)'],
+      ['キーワード', doc.getKeywords() || '(なし)'],
+      ['作成アプリ', doc.getCreator() || '(なし)'],
+      ['PDF生成', doc.getProducer() || '(なし)'],
+      ['作成日', doc.getCreationDate()?.toLocaleString('ja-JP') || '(なし)'],
+      ['更新日', doc.getModificationDate()?.toLocaleString('ja-JP') || '(なし)'],
+    ];
+    const table = document.getElementById('infoTable');
+    table.innerHTML = info.map(([k, v]) => `
+      <tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:10px 12px;font-weight:500;font-size:13px;width:140px;color:var(--text-sub);">${k}</td>
+        <td style="padding:10px 12px;font-size:13px;">${v}</td>
+      </tr>
+    `).join('');
+    document.getElementById('infoPanel').style.display = '';
+  } catch (e) {
+    showToast('エラー: ' + e.message, 'error');
+  }
+});
+// ============================================================
+// Color Preset handling (for addtext)
+// ============================================================
+document.getElementById('colorPresets').addEventListener('click', (e) => {
+  const btn = e.target.closest('.color-preset');
+  if (!btn) return;
+  const color = btn.dataset.color;
+  document.getElementById('addtextColor').value = color;
+  document.querySelectorAll('#colorPresets .color-preset').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+});
+document.getElementById('addtextColor').addEventListener('input', (e) => {
+  const val = e.target.value.toLowerCase();
+  document.querySelectorAll('#colorPresets .color-preset').forEach(b => {
+    b.classList.toggle('active', b.dataset.color === val);
+  });
+});
+// ============================================================
+// 8. ファイル圧縮
+// ============================================================
+setupDropZone('compressDropZone', 'compressFileInput', async (files) => {
+  const f = files.find(f => f.name.toLowerCase().endsWith('.pdf'));
+  if (!f) { showToast('PDFファイルを選択してください', 'error'); return; }
+  const buf = await readFileAsArrayBuffer(f);
+  state.compress.file = { name: f.name, size: f.size, data: buf };
+  const doc = await loadPdf(buf);
+  document.getElementById('compressFileInfo').textContent =
+    `${f.name} (${doc.getPageCount()}ページ / ${formatSize(f.size)})`;
+  document.getElementById('compressBtn').disabled = false;
+  document.getElementById('compressResult').style.display = 'none';
+});
+function updateCompressUI() {
+  const mode = document.getElementById('compressMode').value;
+  const qualityInput = document.getElementById('compressQuality');
+  const dpiSelect = document.getElementById('compressDpi');
+  if (mode === 'standard') {
+    qualityInput.value = 85;
+    dpiSelect.value = '150';
+  } else if (mode === 'high') {
+    qualityInput.value = 60;
+    dpiSelect.value = '72';
+  } else {
+    qualityInput.value = 95;
+    dpiSelect.value = '200';
+  }
+  document.getElementById('compressQualityLabel').textContent = qualityInput.value;
+}
+async function executeCompress() {
+  if (!state.compress.file) return;
+  const quality = parseInt(document.getElementById('compressQuality').value) / 100;
+  const dpi = parseInt(document.getElementById('compressDpi').value);
+  const originalSize = state.compress.file.size;
+  showLoading('PDFを圧縮中...');
+  try {
+    const srcData = new Uint8Array(state.compress.file.data);
+    const pdfJs = await pdfjsLib.getDocument({ data: srcData.slice(), cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/', cMapPacked: true }).promise;
+    const numPages = pdfJs.numPages;
+    const newDoc = await PDFDocument.create();
+    for (let i = 1; i <= numPages; i++) {
+      showLoading(`ページ ${i}/${numPages} を処理中...`);
+      const page = await pdfJs.getPage(i);
+      const vp = page.getViewport({ scale: 1 });
+      const scale = dpi / 72;
+      const viewport = page.getViewport({ scale });
+      const canvas = document.createElement('canvas');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      const ctx = canvas.getContext('2d');
+      await page.render({ canvasContext: ctx, viewport }).promise;
+      // Convert to JPEG blob
+      const blob = await new Promise(resolve =>
+        canvas.toBlob(resolve, 'image/jpeg', quality)
+      );
+      const jpegBuf = await blob.arrayBuffer();
+      const img = await newDoc.embedJpg(jpegBuf);
+      const newPage = newDoc.addPage([vp.width, vp.height]);
+      newPage.drawImage(img, { x: 0, y: 0, width: vp.width, height: vp.height });
+    }
+    pdfJs.destroy();
+    const bytes = await newDoc.save();
+    const newSize = bytes.length;
+    const reduction = ((1 - newSize / originalSize) * 100).toFixed(1);
+    const baseName = state.compress.file.name.replace(/\.pdf$/i, '');
+    downloadBlob(new Blob([bytes], { type: 'application/pdf' }), `${baseName}_圧縮済み.pdf`);
+    // Show result
+    const resultDiv = document.getElementById('compressResult');
+    resultDiv.style.display = '';
+    if (newSize < originalSize) {
+      resultDiv.innerHTML = `
+        <div class="compress-result">
+          <span class="size">${formatSize(originalSize)}</span>
+          <span class="arrow">→</span>
+          <span class="size">${formatSize(newSize)}</span>
+          <span class="reduction">(-${reduction}% 削減)</span>
+        </div>`;
+      showToast(`圧縮完了: ${reduction}% 削減しました`, 'success');
+    } else {
+      resultDiv.innerHTML = `
+        <div class="compress-result">
+          <span class="size">${formatSize(originalSize)}</span>
+          <span class="arrow">→</span>
+          <span class="size">${formatSize(newSize)}</span>
+          <span style="color:var(--warning);font-weight:600;">（元のファイルより大きくなりました）</span>
+        </div>`;
+      showToast('このPDFは既に最適化されているか、圧縮効果がありませんでした', 'error');
+    }
+  } catch (e) {
+    showToast('エラー: ' + e.message, 'error');
+  }
+  hideLoading();
+}
+// ============================================================
+// Init
+// ============================================================
+updateWmPreview();
+</script>
+</body>
+</html>
